@@ -35,6 +35,11 @@ function stopReminders() {
 }
 
 function triggerFinalAlert() {
+  if (!state.remindersEnabled) {
+    ui.hideReminderModal();
+    return;
+  }
+
   if (!state.finalAlertShown) {
     state = { ...state, finalAlertShown: true };
     saveState(state);
@@ -58,6 +63,12 @@ function handleEndTimeReached() {
 function showReminderIfDue() {
   if (state.stopped || hasEndTimePassed(state.endTime)) {
     handleEndTimeReached();
+    return;
+  }
+
+  if (!state.remindersEnabled) {
+    ui.hideReminderModal();
+    ui.renderStatus(state);
     return;
   }
 
@@ -97,7 +108,7 @@ function startTimers() {
     return;
   }
 
-  if (isReminderDue(state)) {
+  if (state.remindersEnabled && isReminderDue(state)) {
     setTimeout(showReminderIfDue, 500);
   }
 }
@@ -144,13 +155,29 @@ ui.els.intervalRadios.forEach((radio) => {
   });
 });
 
+ui.els.remindersEnabledInput.addEventListener("change", (event) => {
+  const enabled = event.target.checked;
+
+  persist({
+    ...state,
+    remindersEnabled: enabled,
+    lastReminderAt: enabled ? state.lastReminderAt : null,
+  });
+
+  if (!enabled) {
+    ui.hideReminderModal();
+  } else if (!state.stopped && isReminderDue(state)) {
+    setTimeout(showReminderIfDue, 300);
+  }
+});
+
 ui.els.resetBtn.addEventListener("click", () => {
   if (!window.confirm("Reset all checklist items? Settings will be kept.")) {
     return;
   }
 
   persist(resetChecklist(state));
-  if (!state.stopped && isReminderDue(state)) {
+  if (state.remindersEnabled && !state.stopped && isReminderDue(state)) {
     setTimeout(showReminderIfDue, 300);
   }
 });

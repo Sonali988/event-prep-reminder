@@ -119,6 +119,7 @@ export function getDefaultState() {
   return {
     endTime: "09:45",
     reminderIntervalMinutes: 15,
+    remindersEnabled: true,
     lastReminderAt: null,
     stopped: false,
     finalAlertShown: false,
@@ -159,7 +160,10 @@ export function loadState() {
       ...defaults,
       ...saved,
       groups: mergeGroups(saved.groups, defaults.groups),
-      reminderIntervalMinutes: saved.reminderIntervalMinutes === 20 ? 20 : 15,
+      reminderIntervalMinutes: [10, 15, 20].includes(saved.reminderIntervalMinutes)
+        ? saved.reminderIntervalMinutes
+        : 15,
+      remindersEnabled: saved.remindersEnabled !== false,
       stopped: Boolean(saved.stopped),
       finalAlertShown: Boolean(saved.finalAlertShown),
     };
@@ -241,7 +245,7 @@ export function getMsUntilNextReminder(state, now = new Date()) {
 }
 
 export function isReminderDue(state, now = new Date()) {
-  if (state.stopped || isAllChecked(state)) {
+  if (!state.remindersEnabled || state.stopped || isAllChecked(state)) {
     return false;
   }
 

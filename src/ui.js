@@ -54,6 +54,16 @@ function reminderIntroForGroups(groups) {
   return `Work through these ${groups.length} sections — ${sectionNames} — then check them off below.`;
 }
 
+function formatSettingsPreview(state, now = new Date()) {
+  const serviceTime = formatServiceTime(state.endTime, now);
+
+  if (state.remindersEnabled === false) {
+    return `Service starts ${serviceTime} · Reminders off`;
+  }
+
+  return `Service starts ${serviceTime} · Reminders every ${state.reminderIntervalMinutes} min`;
+}
+
 function formatDuration(ms) {
   const totalMinutes = Math.ceil(ms / 60000);
   if (totalMinutes <= 0) {
@@ -72,6 +82,9 @@ export function createUi(root) {
     checklist: root.querySelector("#checklist"),
     endTimeInput: root.querySelector("#end-time-input"),
     intervalRadios: root.querySelectorAll('input[name="interval"]'),
+    intervalFieldset: root.querySelector("#reminder-interval-fieldset"),
+    remindersEnabledInput: root.querySelector("#reminders-enabled-input"),
+    settingsPreview: root.querySelector("#settings-preview"),
     resetBtn: root.querySelector("#reset-checklist-btn"),
     reminderModal: document.getElementById("reminder-modal"),
     reminderBadge: document.getElementById("reminder-badge"),
@@ -101,6 +114,13 @@ export function createUi(root) {
     if (state.stopped || hasEndTimePassed(state.endTime, now)) {
       strip.textContent = "Event started — reminders stopped";
       strip.classList.add("status-strip--ended");
+      return;
+    }
+
+    if (state.remindersEnabled === false) {
+      const untilEnd = getMsUntilEnd(state.endTime, now);
+      strip.textContent = `Reminders off · Service starts in ${formatDuration(untilEnd)}`;
+      strip.classList.add("status-strip--ok");
       return;
     }
 
@@ -148,11 +168,14 @@ export function createUi(root) {
       .join("");
   }
 
-  function renderSettings(state) {
+  function renderSettings(state, now = new Date()) {
     els.endTimeInput.value = state.endTime;
+    els.remindersEnabledInput.checked = state.remindersEnabled !== false;
+    els.intervalFieldset.disabled = state.remindersEnabled === false;
     els.intervalRadios.forEach((radio) => {
       radio.checked = Number(radio.value) === state.reminderIntervalMinutes;
     });
+    els.settingsPreview.textContent = formatSettingsPreview(state, now);
   }
 
   function renderReminderModal(state, now = new Date()) {
@@ -215,7 +238,7 @@ export function createUi(root) {
 
   function renderAll(state, now = new Date()) {
     updateClock(now);
-    renderSettings(state);
+    renderSettings(state, now);
     renderChecklist(state);
     renderStatus(state, now);
     renderReminderModal(state);
