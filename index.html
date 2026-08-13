@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Event Prep Reminder</title>
+    <link rel="icon" href="/fav.png" type="image/png" />
+    <title>Service Prep</title>
     <link rel="stylesheet" href="/styles/main.css" />
   </head>
   <body>
@@ -35,6 +36,10 @@
             <legend>Reminder interval</legend>
             <div class="settings__radio-group">
               <label>
+                <input type="radio" name="interval" value="10" />
+                10 min
+              </label>
+              <label>
                 <input type="radio" name="interval" value="15" checked />
                 15 min
               </label>
@@ -55,13 +60,25 @@
     </div>
 
     <div class="modal-backdrop hidden" id="reminder-modal" role="dialog" aria-modal="true" aria-labelledby="reminder-title">
-      <div class="modal">
-        <h2 class="modal__title" id="reminder-title">Reminder — still pending</h2>
-        <p class="modal__intro">Please confirm these items before the service starts:</p>
-        <ul class="modal__list" id="reminder-list"></ul>
-        <div class="modal__actions">
-          <button type="button" class="btn btn--primary" id="reminder-dismiss-btn">Got it</button>
-        </div>
+      <div class="modal modal--reminder">
+        <header class="modal__header">
+          <div class="modal__stats">
+            <span class="modal__badge" id="reminder-badge"></span>
+            <span class="modal__time" id="reminder-time"></span>
+          </div>
+          <div class="modal__progress" aria-hidden="true">
+            <div class="modal__progress-bar" id="reminder-progress-bar"></div>
+          </div>
+          <h2 class="modal__title" id="reminder-title">Prep reminder</h2>
+          <p class="modal__intro" id="reminder-intro"></p>
+        </header>
+        <div class="modal__body" id="reminder-list"></div>
+        <footer class="modal__footer">
+          <p class="modal__hint">Dismiss to jump to the checklist and mark items complete.</p>
+          <div class="modal__actions">
+            <button type="button" class="btn btn--primary" id="reminder-dismiss-btn">Got it — back to checklist</button>
+          </div>
+        </footer>
       </div>
     </div>
 

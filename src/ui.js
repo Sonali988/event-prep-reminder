@@ -2,9 +2,10 @@ import {
   getGroupProgress,
   getMsUntilEnd,
   getMsUntilNextReminder,
-  getUncheckedItems,
+  getUncheckedGroups,
   hasEndTimePassed,
   isAllChecked,
+  parseEndTimeToday,
 } from "./state.js";
 
 function formatClock(date) {
@@ -13,6 +14,44 @@ function formatClock(date) {
     minute: "2-digit",
     second: "2-digit",
   });
+}
+
+function formatServiceTime(endTime, now = new Date()) {
+  return parseEndTimeToday(endTime, now).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getOverallProgress(state) {
+  let done = 0;
+  let total = 0;
+
+  for (const group of state.groups) {
+    const progress = getGroupProgress(group);
+    done += progress.done;
+    total += progress.total;
+  }
+
+  return {
+    done,
+    total,
+    percent: total ? Math.round((done / total) * 100) : 100,
+  };
+}
+
+function reminderTitleForCount(count) {
+  if (count === 1) {
+    return "1 item still needs your attention";
+  }
+
+  return `${count} items still pending`;
+}
+
+function reminderIntroForGroups(groups) {
+  const sectionNames = groups.map((group) => group.title.toLowerCase()).join(", ");
+
+  return `Work through these ${groups.length} sections — ${sectionNames} — then check them off below.`;
 }
 
 function formatDuration(ms) {
@@ -35,6 +74,11 @@ export function createUi(root) {
     intervalRadios: root.querySelectorAll('input[name="interval"]'),
     resetBtn: root.querySelector("#reset-checklist-btn"),
     reminderModal: document.getElementById("reminder-modal"),
+    reminderBadge: document.getElementById("reminder-badge"),
+    reminderTime: document.getElementById("reminder-time"),
+    reminderProgressBar: document.getElementById("reminder-progress-bar"),
+    reminderTitle: document.getElementById("reminder-title"),
+    reminderIntro: document.getElementById("reminder-intro"),
     reminderList: document.getElementById("reminder-list"),
     reminderDismissBtn: document.getElementById("reminder-dismiss-btn"),
     finalAlert: document.getElementById("final-alert"),
@@ -92,7 +136,7 @@ export function createUi(root) {
           .join("");
 
         return `
-          <section class="checklist-group ${complete ? "checklist-group--complete" : ""}" data-group-id="${group.id}">
+          <section class="checklist-group checklist-group--${group.id} ${complete ? "checklist-group--complete" : ""}" data-group-id="${group.id}">
             <div class="checklist-group__header">
               <h2 class="checklist-group__title">${group.title}</h2>
               <span class="checklist-group__progress">${done} / ${total}</span>
@@ -111,13 +155,39 @@ export function createUi(root) {
     });
   }
 
-  function renderReminderModal(state) {
-    const unchecked = getUncheckedItems(state);
-    els.reminderList.innerHTML = unchecked
-      .map(
-        (item) =>
-          `<li><strong>${item.groupTitle}</strong><span>${item.label}</span></li>`,
-      )
+  function renderReminderModal(state, now = new Date()) {
+    const groups = getUncheckedGroups(state);
+    const pendingCount = groups.reduce((count, group) => count + group.items.length, 0);
+    const overall = getOverallProgress(state);
+    const untilEnd = formatDuration(getMsUntilEnd(state.endTime, now));
+    const serviceTime = formatServiceTime(state.endTime, now);
+
+    els.reminderBadge.textContent =
+      pendingCount === 1 ? "1 item pending" : `${pendingCount} items pending`;
+    els.reminderTime.textContent = `Service at ${serviceTime} · starts in ${untilEnd}`;
+    els.reminderProgressBar.style.width = `${overall.percent}%`;
+    els.reminderTitle.textContent = reminderTitleForCount(pendingCount);
+    els.reminderIntro.textContent = reminderIntroForGroups(groups);
+
+    els.reminderList.innerHTML = groups
+      .map((group) => {
+        const itemsHtml = group.items
+          .map(
+            (item) =>
+              `<li class="modal__item" data-group-id="${group.id}" data-item-id="${item.id}">${item.label}</li>`,
+          )
+          .join("");
+
+        return `
+          <section class="modal__section modal__section--${group.id}">
+            <div class="modal__section-header">
+              <h3 class="modal__section-title">${group.title}</h3>
+              <span class="modal__section-count">${group.done} / ${group.total}</span>
+            </div>
+            <ul class="modal__section-list">${itemsHtml}</ul>
+          </section>
+        `;
+      })
       .join("");
   }
 

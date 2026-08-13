@@ -6,26 +6,111 @@ export function getDefaultGroups() {
       id: "media",
       title: "Do you have all media ready?",
       items: [
-        { id: "intro_video", label: "Current intro video", checked: false },
+        { id: "intro_video", label: "Intro video", checked: false },
         { id: "thumbnail", label: "Thumbnail", checked: false },
         { id: "offering_video", label: "Offering video", checked: false },
         { id: "testimonies", label: "Testimonies", checked: false },
-        { id: "songs", label: "Songs", checked: false },
         { id: "testimonies_sequence", label: "Testimonies sequence", checked: false },
+        { id: "songs", label: "Songs", checked: false },
         { id: "songs_sequence", label: "Songs sequence", checked: false },
+        {
+          id: "last_week_media",
+          label: "Videos/photos from last week's event",
+          checked: false,
+        },
       ],
     },
     {
-      id: "backstage_timer",
-      title: "Have you conveyed the intro video timer to backstage?",
+      id: "apps",
+      title: "Apps to be open",
       items: [
-        { id: "timer_conveyed", label: "Yes, conveyed to backstage", checked: false },
+        { id: "propresentor", label: "ProPresenter", checked: false },
+        { id: "openlp", label: "OpenLP", checked: false },
+        { id: "file_explorer", label: "File Explorer", checked: false },
+        { id: "chrome", label: "Chrome", checked: false },
+        { id: "whatsapp", label: "WhatsApp", checked: false },
+        { id: "canva", label: "Canva", checked: false },
+        { id: "notepad", label: "Notepad", checked: false },
+        {
+          id: "chatgpt",
+          label: "ChatGPT — verses & lyrics search prompt ready",
+          checked: false,
+        },
+        {
+          id: "bible_verse_card",
+          label: "Bible verse card app",
+          checked: false,
+        },
       ],
     },
     {
-      id: "video_loops",
-      title: "Have you stopped the loops of all the videos?",
-      items: [{ id: "loops_stopped", label: "Yes, all loops stopped", checked: false }],
+      id: "prep_before_service",
+      title: "Preparation before service",
+      items: [
+        { id: "song_sequence", label: "Check song sequence", checked: false },
+        {
+          id: "testimonies_sequence",
+          label: "Check testimonies sequence",
+          checked: false,
+        },
+        {
+          id: "convey_timers_backstage",
+          label: "Convey testimonies timer & intro video timer to backstage",
+          checked: false,
+        },
+        {
+          id: "mute_apps_except_propresentor",
+          label: "Mute all apps except ProPresenter",
+          checked: false,
+        },
+        {
+          id: "stop_video_loops",
+          label: "Stop loop for intro, testimonies & announcement videos",
+          checked: false,
+        },
+        {
+          id: "songs_theme_hindi",
+          label: "Check songs theme (Hindi up, no black background)",
+          checked: false,
+        },
+        {
+          id: "sound_check_videos",
+          label: "Sound check for all videos",
+          checked: false,
+        },
+        {
+          id: "service_order_live",
+          label: "Check service order for live testimonies & announcements",
+          checked: false,
+        },
+        {
+          id: "openlp_theme_verses",
+          label: "Check today's theme in OpenLP & Bible verses",
+          checked: false,
+        },
+        {
+          id: "offering_verses_ready",
+          label: "Keep offering verses ready",
+          checked: false,
+        },
+        { id: "download_verses", label: "Download verses", checked: false },
+        {
+          id: "download_announcements",
+          label: "Download announcement posters/videos",
+          checked: false,
+        },
+        {
+          id: "adjust_propresentor_height",
+          label: "Adjust height of ProPresenter",
+          checked: false,
+        },
+        {
+          id: "no_lyrics_on_screen",
+          label: "No lyrics on screen",
+          checked: false,
+        },
+        { id: "thumbnail_on", label: "Keep thumbnail ON", checked: false },
+      ],
     },
   ];
 }
@@ -104,6 +189,20 @@ export function getUncheckedItems(state) {
   }
 
   return items;
+}
+
+export function getUncheckedGroups(state) {
+  return state.groups
+    .map((group) => {
+      const uncheckedItems = group.items.filter((item) => !item.checked);
+      return {
+        id: group.id,
+        title: group.title,
+        items: uncheckedItems,
+        ...getGroupProgress(group),
+      };
+    })
+    .filter((group) => group.items.length > 0);
 }
 
 export function isAllChecked(state) {
@@ -186,11 +285,11 @@ export function setItemChecked(state, groupId, itemId, checked) {
       group.id !== groupId
         ? group
         : {
-            ...group,
-            items: group.items.map((item) =>
-              item.id === itemId ? { ...item, checked } : item,
-            ),
-          },
+          ...group,
+          items: group.items.map((item) =>
+            item.id === itemId ? { ...item, checked } : item,
+          ),
+        },
     ),
   };
 }

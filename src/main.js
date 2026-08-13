@@ -62,7 +62,7 @@ function showReminderIfDue() {
   }
 
   if (isReminderDue(state)) {
-    ui.renderReminderModal(state);
+    ui.renderReminderModal(state, new Date());
     ui.showReminderModal();
     state = { ...state, lastReminderAt: new Date().toISOString() };
     saveState(state);
