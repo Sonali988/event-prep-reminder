@@ -400,6 +400,279 @@ body {
   background: var(--danger-muted);
 }
 
+.testimony-timers {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 1.15rem 1.35rem;
+  margin-bottom: 1.5rem;
+}
+
+.testimony-timers__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.testimony-timers__title {
+  margin: 0;
+  font-size: clamp(1.15rem, 2vw, 1.4rem);
+  font-weight: 650;
+}
+
+.testimony-timers__subtitle {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.testimony-timers__total {
+  text-align: right;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius);
+  padding: 0.55rem 0.85rem;
+  min-width: 6.5rem;
+}
+
+.testimony-timers__total-label {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.testimony-timers__total strong {
+  display: block;
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-strong);
+}
+
+.testimony-timers__grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.testimony-timers__panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  padding: 0.95rem 1rem;
+}
+
+.testimony-timers__panel-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent-strong);
+}
+
+.testimony-timers__hint {
+  margin: -0.35rem 0 0.75rem;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.testimony-timers__table-head,
+.testimony-timers__row {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr) 6.5rem;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.testimony-timers__table-head {
+  margin-bottom: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.testimony-timers__rows {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.testimony-timers__row--backup {
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+}
+
+.testimony-timers__index {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.testimony-timers__row--backup .testimony-timers__index {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.testimony-timers__name,
+.testimony-timers__duration,
+.testimony-timers__intro input {
+  width: 100%;
+  font-size: 0.98rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.testimony-timers__name:focus-visible,
+.testimony-timers__duration:focus-visible,
+.testimony-timers__intro input:focus-visible,
+.testimony-timers__preview:focus-visible {
+  outline: 2px solid var(--accent-border);
+  outline-offset: 1px;
+}
+
+.testimony-timers__duration {
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.testimony-timers__intro {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.testimony-timers__intro-label {
+  font-size: 0.88rem;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.testimony-timers__intro input {
+  max-width: 8rem;
+}
+
+.testimony-timers__message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.testimony-timers__message-header .testimony-timers__panel-title {
+  margin: 0;
+}
+
+.testimony-timers__preview {
+  width: 100%;
+  min-height: 11rem;
+  resize: vertical;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  padding: 0.85rem 0.95rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.testimony-timers__copy-status {
+  margin: 0.6rem 0 0;
+  font-size: 0.88rem;
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.service-notes {
+  margin-top: 1.5rem;
+}
+
+.service-notes__body {
+  padding: 0 1.25rem 1.25rem;
+}
+
+.service-notes__intro {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.service-notes__grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.service-notes__field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.service-notes__label {
+  font-weight: 650;
+  font-size: 0.98rem;
+  color: var(--text);
+}
+
+.service-notes__hint {
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.service-notes__field textarea {
+  width: 100%;
+  min-height: 7rem;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 0.98rem;
+  line-height: 1.5;
+  padding: 0.8rem 0.9rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+
+.service-notes__field textarea:focus-visible {
+  outline: 2px solid var(--accent-border);
+  outline-offset: 1px;
+}
+
+.service-notes__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.service-notes__status {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ok);
+}
+
+.service-notes__status--error {
+  color: var(--danger);
+}
+
 .checklist {
   display: grid;
   gap: 1.25rem;
@@ -744,6 +1017,26 @@ body {
 }
 
 @media (min-width: 768px) {
+  .testimony-timers__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .testimony-timers__panel--message {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 1100px) {
+  .testimony-timers__grid {
+    grid-template-columns: 1.15fr 0.85fr 1fr;
+  }
+
+  .testimony-timers__panel--message {
+    grid-column: auto;
+  }
+}
+
+@media (min-width: 768px) {
   .settings__body {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -792,6 +1085,10 @@ body {
 }
 
 @media (min-width: 900px) {
+  .service-notes__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .checklist {
     grid-template-columns: 1fr 1fr;
   }

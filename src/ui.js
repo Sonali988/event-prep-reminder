@@ -7,6 +7,14 @@ import {
   isAllChecked,
   parseEndTimeToday,
 } from "./state.js";
+import {
+  buildBackstageMessage,
+  formatDurationSeconds,
+  sumMainTestimonySeconds,
+} from "./testimonyTimers.js";
+import {
+  buildServiceNotesSummary,
+} from "./serviceNotes.js";
 
 function formatClock(date) {
   return date.toLocaleTimeString([], {
@@ -75,6 +83,14 @@ function formatDuration(ms) {
   return `${totalMinutes} min`;
 }
 
+function escapeHtml(value) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
 export function createUi(root) {
   const els = {
     liveClock: root.querySelector("#live-clock"),
@@ -86,6 +102,12 @@ export function createUi(root) {
     remindersEnabledInput: root.querySelector("#reminders-enabled-input"),
     settingsPreview: root.querySelector("#settings-preview"),
     resetBtn: root.querySelector("#reset-checklist-btn"),
+    testimonyTimers: root.querySelector("#testimony-timers"),
+    serviceNotesPreview: root.querySelector("#service-notes-preview"),
+    serviceRemarksInput: root.querySelector("#service-remarks-input"),
+    serviceObservationsInput: root.querySelector("#service-observations-input"),
+    serviceChallengesInput: root.querySelector("#service-challenges-input"),
+    serviceNotesStatus: root.querySelector("#service-notes-status"),
     reminderModal: document.getElementById("reminder-modal"),
     reminderBadge: document.getElementById("reminder-badge"),
     reminderTime: document.getElementById("reminder-time"),
@@ -168,6 +190,156 @@ export function createUi(root) {
       .join("");
   }
 
+  function renderTestimonyTimers(state) {
+    const { testimonyTimers } = state;
+    const totalSeconds = sumMainTestimonySeconds(testimonyTimers.main);
+    const message = buildBackstageMessage(testimonyTimers);
+
+    const mainRows = testimonyTimers.main
+      .map(
+        (testimony, index) => `
+          <div class="testimony-timers__row">
+            <span class="testimony-timers__index">${index + 1}</span>
+            <input
+              type="text"
+              class="testimony-timers__name"
+              data-kind="main"
+              data-id="${testimony.id}"
+              data-field="name"
+              placeholder="e.g. Sister Akansha"
+              value="${escapeHtml(testimony.name)}"
+            />
+            <input
+              type="text"
+              class="testimony-timers__duration"
+              data-kind="main"
+              data-id="${testimony.id}"
+              data-field="duration"
+              placeholder="mm:ss"
+              inputmode="numeric"
+              pattern="[0-9]{1,2}:[0-9]{2}"
+              value="${escapeHtml(testimony.duration)}"
+            />
+          </div>
+        `,
+      )
+      .join("");
+
+    const backupRows = testimonyTimers.backup
+      .map(
+        (testimony) => `
+          <div class="testimony-timers__row testimony-timers__row--backup">
+            <span class="testimony-timers__index">backup</span>
+            <input
+              type="text"
+              class="testimony-timers__name"
+              data-kind="backup"
+              data-id="${testimony.id}"
+              data-field="name"
+              placeholder="e.g. Brother Ankit"
+              value="${escapeHtml(testimony.name)}"
+            />
+          </div>
+        `,
+      )
+      .join("");
+
+    els.testimonyTimers.innerHTML = `
+      <div class="testimony-timers__header">
+        <div>
+          <h2 class="testimony-timers__title">Testimony timers</h2>
+          <p class="testimony-timers__subtitle">Add main testimony durations, then copy the backstage message.</p>
+        </div>
+        <div class="testimony-timers__total" aria-live="polite">
+          <span class="testimony-timers__total-label">Total</span>
+          <strong id="testimony-total-value">${formatDurationSeconds(totalSeconds)}</strong>
+        </div>
+      </div>
+
+      <div class="testimony-timers__grid">
+        <div class="testimony-timers__panel">
+          <h3 class="testimony-timers__panel-title">Main testimonies</h3>
+          <div class="testimony-timers__table-head">
+            <span></span>
+            <span>Name</span>
+            <span>Duration</span>
+          </div>
+          <div class="testimony-timers__rows">${mainRows}</div>
+        </div>
+
+        <div class="testimony-timers__panel">
+          <h3 class="testimony-timers__panel-title">Backup testimonies</h3>
+          <p class="testimony-timers__hint">Names only — not included in the total.</p>
+          <div class="testimony-timers__rows">${backupRows}</div>
+
+          <label class="testimony-timers__intro">
+            <span class="testimony-timers__intro-label">Intro timer</span>
+            <input
+              type="text"
+              id="intro-timer-input"
+              data-kind="intro"
+              data-field="introTimer"
+              placeholder="mm:ss"
+              inputmode="numeric"
+              pattern="[0-9]{1,2}:[0-9]{2}"
+              value="${escapeHtml(testimonyTimers.introTimer)}"
+            />
+          </label>
+        </div>
+
+        <div class="testimony-timers__panel testimony-timers__panel--message">
+          <div class="testimony-timers__message-header">
+            <h3 class="testimony-timers__panel-title">Backstage message</h3>
+            <button type="button" class="btn btn--primary" id="copy-backstage-message-btn">Copy message</button>
+          </div>
+          <textarea
+            id="backstage-message-preview"
+            class="testimony-timers__preview"
+            readonly
+            rows="12"
+          >${escapeHtml(message)}</textarea>
+          <p class="testimony-timers__copy-status hidden" id="copy-status" role="status"></p>
+        </div>
+      </div>
+    `;
+  }
+
+  function updateTestimonyPreview(state) {
+    const totalEl = els.testimonyTimers.querySelector("#testimony-total-value");
+    const previewEl = els.testimonyTimers.querySelector("#backstage-message-preview");
+
+    if (!totalEl || !previewEl) {
+      renderTestimonyTimers(state);
+      return;
+    }
+
+    totalEl.textContent = formatDurationSeconds(
+      sumMainTestimonySeconds(state.testimonyTimers.main),
+    );
+    previewEl.value = buildBackstageMessage(state.testimonyTimers);
+  }
+
+  function renderServiceNotes(state) {
+    const { serviceNotes } = state;
+    const active = document.activeElement;
+
+    if (els.serviceRemarksInput && active !== els.serviceRemarksInput) {
+      els.serviceRemarksInput.value = serviceNotes.remarks;
+    }
+
+    if (els.serviceObservationsInput && active !== els.serviceObservationsInput) {
+      els.serviceObservationsInput.value = serviceNotes.observations;
+    }
+
+    if (els.serviceChallengesInput && active !== els.serviceChallengesInput) {
+      els.serviceChallengesInput.value = serviceNotes.challenges;
+    }
+
+    if (els.serviceNotesPreview) {
+      els.serviceNotesPreview.textContent = buildServiceNotesSummary(serviceNotes);
+    }
+  }
+
   function renderSettings(state, now = new Date()) {
     els.endTimeInput.value = state.endTime;
     els.remindersEnabledInput.checked = state.remindersEnabled !== false;
@@ -239,7 +411,9 @@ export function createUi(root) {
   function renderAll(state, now = new Date()) {
     updateClock(now);
     renderSettings(state, now);
+    renderTestimonyTimers(state);
     renderChecklist(state);
+    renderServiceNotes(state);
     renderStatus(state, now);
     renderReminderModal(state);
   }
@@ -250,6 +424,9 @@ export function createUi(root) {
     renderStatus,
     renderChecklist,
     renderSettings,
+    renderTestimonyTimers,
+    updateTestimonyPreview,
+    renderServiceNotes,
     renderReminderModal,
     showReminderModal,
     hideReminderModal,

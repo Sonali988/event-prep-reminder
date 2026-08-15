@@ -89,7 +89,69 @@
         </div>
       </details>
 
+      <section class="testimony-timers" id="testimony-timers" aria-label="Testimony timers"></section>
+
       <main class="checklist" id="checklist" aria-label="Preparation checklist"></main>
+
+      <details class="settings service-notes" id="service-notes-panel">
+        <summary class="settings__summary">
+          <span class="settings__summary-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
+          </span>
+          <span class="settings__summary-text">
+            <strong>Service notes</strong>
+            <small id="service-notes-preview">No notes recorded yet</small>
+          </span>
+          <span class="settings__chevron" aria-hidden="true"></span>
+        </summary>
+
+        <div class="service-notes__body">
+          <p class="service-notes__intro">
+            Record remarks, observations, and challenges from today&apos;s service to discuss with the team later.
+          </p>
+
+          <div class="service-notes__grid">
+            <label class="service-notes__field">
+              <span class="service-notes__label">Remarks</span>
+              <span class="service-notes__hint">General comments or follow-ups from the service.</span>
+              <textarea
+                id="service-remarks-input"
+                rows="5"
+                placeholder="e.g. Intro video started late, offering flow was smooth…"
+              ></textarea>
+            </label>
+
+            <label class="service-notes__field">
+              <span class="service-notes__label">Observations</span>
+              <span class="service-notes__hint">Things you noticed during prep or the service.</span>
+              <textarea
+                id="service-observations-input"
+                rows="5"
+                placeholder="e.g. Lyrics timing was off on song 3, backstage comms were clear…"
+              ></textarea>
+            </label>
+
+            <label class="service-notes__field">
+              <span class="service-notes__label">Challenges</span>
+              <span class="service-notes__hint">Issues to address in the next team discussion.</span>
+              <textarea
+                id="service-challenges-input"
+                rows="5"
+                placeholder="e.g. ProPresenter height needs preset, backup mic check missing…"
+              ></textarea>
+            </label>
+          </div>
+
+          <div class="service-notes__actions">
+            <button type="button" class="btn btn--primary" id="copy-service-notes-btn">Copy notes</button>
+            <button type="button" class="btn btn--ghost-danger" id="clear-service-notes-btn">Clear notes</button>
+            <p class="service-notes__status hidden" id="service-notes-status" role="status"></p>
+          </div>
+        </div>
+      </details>
     </div>
 
     <div class="modal-backdrop hidden" id="reminder-modal" role="dialog" aria-modal="true" aria-labelledby="reminder-title">

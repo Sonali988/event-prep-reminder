@@ -1,4 +1,56 @@
+import {
+  getDefaultServiceNotes,
+  mergeServiceNotes,
+} from "./serviceNotes.js";
+
 export const STORAGE_KEY = "event-prep-reminder-v1";
+
+export function getDefaultTestimonyTimers() {
+  return {
+    introTimer: "",
+    main: [
+      { id: "main-1", name: "", duration: "" },
+      { id: "main-2", name: "", duration: "" },
+      { id: "main-3", name: "", duration: "" },
+      { id: "main-4", name: "", duration: "" },
+    ],
+    backup: [
+      { id: "backup-1", name: "" },
+      { id: "backup-2", name: "" },
+    ],
+  };
+}
+
+function mergeTestimonyTimers(savedTimers) {
+  const defaults = getDefaultTestimonyTimers();
+
+  if (!savedTimers) {
+    return defaults;
+  }
+
+  return {
+    introTimer: typeof savedTimers.introTimer === "string" ? savedTimers.introTimer : "",
+    main: defaults.main.map((defaultItem) => {
+      const savedItem = savedTimers.main?.find((item) => item.id === defaultItem.id);
+      return savedItem
+        ? {
+            ...defaultItem,
+            name: typeof savedItem.name === "string" ? savedItem.name : "",
+            duration: typeof savedItem.duration === "string" ? savedItem.duration : "",
+          }
+        : defaultItem;
+    }),
+    backup: defaults.backup.map((defaultItem) => {
+      const savedItem = savedTimers.backup?.find((item) => item.id === defaultItem.id);
+      return savedItem
+        ? {
+            ...defaultItem,
+            name: typeof savedItem.name === "string" ? savedItem.name : "",
+          }
+        : defaultItem;
+    }),
+  };
+}
 
 export function getDefaultGroups() {
   return [
@@ -124,6 +176,8 @@ export function getDefaultState() {
     stopped: false,
     finalAlertShown: false,
     groups: getDefaultGroups(),
+    testimonyTimers: getDefaultTestimonyTimers(),
+    serviceNotes: getDefaultServiceNotes(),
   };
 }
 
@@ -164,6 +218,8 @@ export function loadState() {
         ? saved.reminderIntervalMinutes
         : 15,
       remindersEnabled: saved.remindersEnabled !== false,
+      testimonyTimers: mergeTestimonyTimers(saved.testimonyTimers),
+      serviceNotes: mergeServiceNotes(saved.serviceNotes),
       stopped: Boolean(saved.stopped),
       finalAlertShown: Boolean(saved.finalAlertShown),
     };
@@ -295,5 +351,19 @@ export function setItemChecked(state, groupId, itemId, checked) {
           ),
         },
     ),
+  };
+}
+
+export function updateTestimonyTimers(state, testimonyTimers) {
+  return {
+    ...state,
+    testimonyTimers,
+  };
+}
+
+export function updateServiceNotes(state, serviceNotes) {
+  return {
+    ...state,
+    serviceNotes,
   };
 }

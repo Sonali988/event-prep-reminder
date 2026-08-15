@@ -6,8 +6,16 @@ import {
   resetChecklist,
   saveState,
   setItemChecked,
+  updateTestimonyTimers,
+  updateServiceNotes,
 } from "./state.js";
 import { createUi } from "./ui.js";
+import { buildBackstageMessage, normalizeDuration } from "./testimonyTimers.js";
+import {
+  buildServiceNotesMessage,
+  getDefaultServiceNotes,
+  hasServiceNotes,
+} from "./serviceNotes.js";
 
 const TEST_MODE = new URLSearchParams(window.location.search).get("test") === "1";
 
@@ -25,6 +33,102 @@ function persist(nextState) {
   state = nextState;
   saveState(state);
   ui.renderAll(state);
+}
+
+function persistTestimonyTimers(testimonyTimers) {
+  state = updateTestimonyTimers(state, testimonyTimers);
+  saveState(state);
+  ui.updateTestimonyPreview(state);
+}
+
+function readServiceNotesFromDom() {
+  return {
+    remarks: ui.els.serviceRemarksInput?.value ?? "",
+    observations: ui.els.serviceObservationsInput?.value ?? "",
+    challenges: ui.els.serviceChallengesInput?.value ?? "",
+  };
+}
+
+function persistServiceNotes(serviceNotes) {
+  state = updateServiceNotes(state, serviceNotes);
+  saveState(state);
+  ui.renderServiceNotes(state);
+}
+
+function showServiceNotesStatus(message, isError = false) {
+  const statusEl = ui.els.serviceNotesStatus;
+  if (!statusEl) {
+    return;
+  }
+
+  statusEl.textContent = message;
+  statusEl.classList.toggle("service-notes__status--error", isError);
+  statusEl.classList.remove("hidden");
+  setTimeout(() => statusEl.classList.add("hidden"), 2500);
+}
+
+async function copyServiceNotes() {
+  const notes = state.serviceNotes;
+
+  if (!hasServiceNotes(notes)) {
+    showServiceNotesStatus("Add some notes before copying.", true);
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(buildServiceNotesMessage(notes));
+    showServiceNotesStatus("Notes copied to clipboard.");
+  } catch {
+    showServiceNotesStatus("Could not copy — select the text and copy manually.", true);
+  }
+}
+
+function applyTestimonyInput(target) {
+  const { kind, id, field } = target.dataset;
+  const testimonyTimers = {
+    ...state.testimonyTimers,
+    main: state.testimonyTimers.main.map((item) => ({ ...item })),
+    backup: state.testimonyTimers.backup.map((item) => ({ ...item })),
+  };
+
+  if (kind === "intro") {
+    testimonyTimers.introTimer = target.value;
+    return testimonyTimers;
+  }
+
+  if (kind === "main" && id && field) {
+    testimonyTimers.main = testimonyTimers.main.map((item) =>
+      item.id === id ? { ...item, [field]: target.value } : item,
+    );
+    return testimonyTimers;
+  }
+
+  if (kind === "backup" && id) {
+    testimonyTimers.backup = testimonyTimers.backup.map((item) =>
+      item.id === id ? { ...item, name: target.value } : item,
+    );
+  }
+
+  return testimonyTimers;
+}
+
+async function copyBackstageMessage() {
+  const message = buildBackstageMessage(state.testimonyTimers);
+  const statusEl = ui.els.testimonyTimers.querySelector("#copy-status");
+
+  try {
+    await navigator.clipboard.writeText(message);
+    if (statusEl) {
+      statusEl.textContent = "Copied to clipboard.";
+      statusEl.classList.remove("hidden");
+      setTimeout(() => statusEl.classList.add("hidden"), 2500);
+    }
+  } catch {
+    if (statusEl) {
+      statusEl.textContent = "Could not copy — select the message and copy manually.";
+      statusEl.classList.remove("hidden");
+    }
+  }
 }
 
 function stopReminders() {
@@ -179,6 +283,84 @@ ui.els.resetBtn.addEventListener("click", () => {
   persist(resetChecklist(state));
   if (state.remindersEnabled && !state.stopped && isReminderDue(state)) {
     setTimeout(showReminderIfDue, 300);
+  }
+});
+
+ui.els.testimonyTimers.addEventListener("input", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) {
+    return;
+  }
+
+  persistTestimonyTimers(applyTestimonyInput(target));
+});
+
+ui.els.testimonyTimers.addEventListener(
+  "blur",
+  (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    if (target.dataset.field !== "duration" && target.dataset.kind !== "intro") {
+      return;
+    }
+
+    const normalized = normalizeDuration(target.value);
+    if (normalized === target.value) {
+      return;
+    }
+
+    target.value = normalized;
+    persistTestimonyTimers(applyTestimonyInput(target));
+  },
+  true,
+);
+
+ui.els.testimonyTimers.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+
+  if (target.id === "copy-backstage-message-btn") {
+    copyBackstageMessage();
+  }
+});
+
+const serviceNotesPanel = document.getElementById("service-notes-panel");
+
+serviceNotesPanel?.addEventListener("input", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLTextAreaElement)) {
+    return;
+  }
+
+  persistServiceNotes(readServiceNotesFromDom());
+});
+
+serviceNotesPanel?.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+
+  if (target.id === "copy-service-notes-btn") {
+    copyServiceNotes();
+    return;
+  }
+
+  if (target.id === "clear-service-notes-btn") {
+    if (!hasServiceNotes(state.serviceNotes)) {
+      return;
+    }
+
+    if (!window.confirm("Clear all service notes?")) {
+      return;
+    }
+
+    persistServiceNotes(getDefaultServiceNotes());
   }
 });
 
