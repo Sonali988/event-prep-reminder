@@ -80,11 +80,11 @@ export function buildBackstageMessage(timers) {
   lines.push("");
 
   if (introSeconds !== null && timers.introTimer.trim()) {
-    lines.push(`Intro timer: ${formatDurationSeconds(introSeconds)}`);
+    lines.push(`*Intro timer: ${formatDurationSeconds(introSeconds)}*`);
     lines.push("");
   }
 
-  lines.push(`total testimonies timer: ${formatDurationSeconds(totalSeconds)}`);
+  lines.push(`*total testimonies timer: ${formatDurationSeconds(totalSeconds)}*`);
 
   return lines.join("\n");
 }
