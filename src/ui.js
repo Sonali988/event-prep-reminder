@@ -94,6 +94,7 @@ function escapeHtml(value) {
 export function createUi(root) {
   const els = {
     liveClock: root.querySelector("#live-clock"),
+    syncStatus: root.querySelector("#sync-status"),
     statusStrip: root.querySelector("#status-strip"),
     checklist: root.querySelector("#checklist"),
     endTimeInput: root.querySelector("#end-time-input"),
@@ -123,6 +124,24 @@ export function createUi(root) {
   function updateClock(now = new Date()) {
     els.liveClock.textContent = formatClock(now);
     els.liveClock.dateTime = now.toISOString();
+  }
+
+  function setSyncStatus(status, detail = "") {
+    if (!els.syncStatus) {
+      return;
+    }
+
+    els.syncStatus.className = `sync-status sync-status--${status}`;
+    const labels = {
+      loading: "Loading…",
+      synced: "Shared",
+      saving: "Saving…",
+      local: "Local only",
+      error: "Sync issue",
+    };
+
+    els.syncStatus.textContent = labels[status] || "Sync";
+    els.syncStatus.title = detail || labels[status] || "Shared sync status";
   }
 
   function renderStatus(state, now = new Date()) {
@@ -421,6 +440,7 @@ export function createUi(root) {
   return {
     els,
     updateClock,
+    setSyncStatus,
     renderStatus,
     renderChecklist,
     renderSettings,

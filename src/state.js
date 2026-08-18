@@ -178,7 +178,83 @@ export function getDefaultState() {
     groups: getDefaultGroups(),
     testimonyTimers: getDefaultTestimonyTimers(),
     serviceNotes: getDefaultServiceNotes(),
+    updatedAt: null,
+    updatedBy: null,
   };
+}
+
+export function normalizeSavedState(saved) {
+  const defaults = getDefaultState();
+
+  if (!saved || typeof saved !== "object") {
+    return defaults;
+  }
+
+  return {
+    ...defaults,
+    ...saved,
+    groups: mergeGroups(saved.groups, defaults.groups),
+    reminderIntervalMinutes: [10, 15, 20].includes(saved.reminderIntervalMinutes)
+      ? saved.reminderIntervalMinutes
+      : 15,
+    remindersEnabled: saved.remindersEnabled !== false,
+    testimonyTimers: mergeTestimonyTimers(saved.testimonyTimers),
+    serviceNotes: mergeServiceNotes(saved.serviceNotes),
+    stopped: Boolean(saved.stopped),
+    finalAlertShown: Boolean(saved.finalAlertShown),
+    updatedAt: typeof saved.updatedAt === "string" ? saved.updatedAt : null,
+    updatedBy: typeof saved.updatedBy === "string" ? saved.updatedBy : null,
+  };
+}
+
+export function loadLocalState() {
+  const defaults = getDefaultState();
+
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return defaults;
+    }
+
+    return normalizeSavedState(JSON.parse(raw));
+  } catch {
+    return defaults;
+  }
+}
+
+export async function loadStateAsync(fetchRemote) {
+  try {
+    const remote = await fetchRemote();
+    if (remote) {
+      const normalized = normalizeSavedState(remote);
+      saveStateLocal(normalized);
+      return normalized;
+    }
+  } catch {
+    // Fall back to local cache when shared storage is unavailable.
+  }
+
+  return loadLocalState();
+}
+
+export function stampState(state, clientId) {
+  return {
+    ...state,
+    updatedAt: new Date().toISOString(),
+    updatedBy: clientId,
+  };
+}
+
+export function saveStateLocal(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+export function loadState() {
+  return loadLocalState();
+}
+
+export function saveState(state) {
+  saveStateLocal(state);
 }
 
 function mergeGroups(savedGroups, defaultGroups) {
@@ -193,43 +269,18 @@ function mergeGroups(savedGroups, defaultGroups) {
       items: defaultGroup.items.map((defaultItem) => {
         const savedItem = savedGroup.items?.find((item) => item.id === defaultItem.id);
         return savedItem
-          ? { ...defaultItem, checked: Boolean(savedItem.checked) }
+          ? {
+              ...defaultItem,
+              checked: Boolean(savedItem.checked),
+              checkedAt:
+                savedItem.checked && typeof savedItem.checkedAt === "string"
+                  ? savedItem.checkedAt
+                  : null,
+            }
           : defaultItem;
       }),
     };
   });
-}
-
-export function loadState() {
-  const defaults = getDefaultState();
-
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return defaults;
-    }
-
-    const saved = JSON.parse(raw);
-    return {
-      ...defaults,
-      ...saved,
-      groups: mergeGroups(saved.groups, defaults.groups),
-      reminderIntervalMinutes: [10, 15, 20].includes(saved.reminderIntervalMinutes)
-        ? saved.reminderIntervalMinutes
-        : 15,
-      remindersEnabled: saved.remindersEnabled !== false,
-      testimonyTimers: mergeTestimonyTimers(saved.testimonyTimers),
-      serviceNotes: mergeServiceNotes(saved.serviceNotes),
-      stopped: Boolean(saved.stopped),
-      finalAlertShown: Boolean(saved.finalAlertShown),
-    };
-  } catch {
-    return defaults;
-  }
-}
-
-export function saveState(state) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
 export function getUncheckedItems(state) {
@@ -347,7 +398,13 @@ export function setItemChecked(state, groupId, itemId, checked) {
         : {
           ...group,
           items: group.items.map((item) =>
-            item.id === itemId ? { ...item, checked } : item,
+            item.id === itemId
+              ? {
+                  ...item,
+                  checked,
+                  checkedAt: checked ? new Date().toISOString() : null,
+                }
+              : item,
           ),
         },
     ),

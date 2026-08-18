@@ -17,6 +17,7 @@
         <div class="header__clock" aria-live="polite">
           <span class="header__clock-label">Now</span>
           <time id="live-clock" class="header__clock-time">--:--:--</time>
+          <span class="sync-status sync-status--loading" id="sync-status" title="Shared sync status">Loading…</span>
         </div>
       </header>
 
@@ -90,6 +91,16 @@
       </details>
 
       <section class="testimony-timers" id="testimony-timers" aria-label="Testimony timers"></section>
+
+      <div class="checklist-toolbar">
+        <div class="checklist-toolbar__text">
+          <h2 class="checklist-toolbar__title">Preparation checklist</h2>
+          <p class="checklist-toolbar__hint">Checked times are saved in IST when you export the PDF.</p>
+        </div>
+        <button type="button" class="btn btn--secondary" id="export-checklist-pdf-btn">
+          Download checklist PDF
+        </button>
+      </div>
 
       <main class="checklist" id="checklist" aria-label="Preparation checklist"></main>
 
