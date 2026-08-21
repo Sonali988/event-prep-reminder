@@ -4,19 +4,46 @@ export function parseDuration(value) {
     return null;
   }
 
-  const match = trimmed.match(/^(\d{1,2}):(\d{2})$/);
-  if (!match) {
+  const colonMatch = trimmed.match(/^(\d{1,2}):(\d{2})$/);
+  if (colonMatch) {
+    const minutes = Number(colonMatch[1]);
+    const seconds = Number(colonMatch[2]);
+
+    if (seconds > 59) {
+      return null;
+    }
+
+    return minutes * 60 + seconds;
+  }
+
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length < 3) {
     return null;
   }
 
-  const minutes = Number(match[1]);
-  const seconds = Number(match[2]);
+  const seconds = Number(digits.slice(-2));
+  const minutes = Number(digits.slice(0, -2));
 
   if (seconds > 59) {
     return null;
   }
 
   return minutes * 60 + seconds;
+}
+
+export function formatDurationInput(value) {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) {
+    return "";
+  }
+
+  if (digits.length <= 2) {
+    return digits;
+  }
+
+  const seconds = digits.slice(-2);
+  const minutes = digits.slice(0, -2);
+  return `${minutes}:${seconds}`;
 }
 
 export function formatDurationSeconds(totalSeconds) {
@@ -31,9 +58,10 @@ export function normalizeDuration(value) {
     return "";
   }
 
-  const parsed = parseDuration(trimmed);
+  const formatted = formatDurationInput(trimmed);
+  const parsed = parseDuration(formatted);
   if (parsed === null) {
-    return trimmed;
+    return formatted;
   }
 
   return formatDurationSeconds(parsed);

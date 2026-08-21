@@ -5,6 +5,8 @@ import {
   getUncheckedGroups,
   hasEndTimePassed,
   isAllChecked,
+  isChangeTrackedItem,
+  getChangeTrackMessage,
   parseEndTimeToday,
 } from "./state.js";
 import {
@@ -94,6 +96,7 @@ function escapeHtml(value) {
 export function createUi(root) {
   const els = {
     liveClock: root.querySelector("#live-clock"),
+    syncStatus: root.querySelector("#sync-status"),
     statusStrip: root.querySelector("#status-strip"),
     checklist: root.querySelector("#checklist"),
     endTimeInput: root.querySelector("#end-time-input"),
@@ -123,6 +126,24 @@ export function createUi(root) {
   function updateClock(now = new Date()) {
     els.liveClock.textContent = formatClock(now);
     els.liveClock.dateTime = now.toISOString();
+  }
+
+  function setSyncStatus(status, detail = "") {
+    if (!els.syncStatus) {
+      return;
+    }
+
+    els.syncStatus.className = `sync-status sync-status--${status}`;
+    const labels = {
+      loading: "Loading…",
+      synced: "Shared",
+      saving: "Saving…",
+      local: "Local only",
+      error: "Sync issue",
+    };
+
+    els.syncStatus.textContent = labels[status] || "Sync";
+    els.syncStatus.title = detail || labels[status] || "Shared sync status";
   }
 
   function renderStatus(state, now = new Date()) {
@@ -168,11 +189,30 @@ export function createUi(root) {
           .map((item) => {
             const checked = item.checked ? "checked" : "";
             const uncheckedClass = item.checked ? "" : "checklist-item--unchecked";
+            const changeToggle = isChangeTrackedItem(item.id)
+              ? `
+                <label class="checklist-item__change" title="${getChangeTrackMessage(item.id)}">
+                  <input
+                    type="checkbox"
+                    class="checklist-item__change-input"
+                    data-change-toggle
+                    data-group-id="${group.id}"
+                    data-item-id="${item.id}"
+                    ${item.changeOccurred ? "checked" : ""}
+                  />
+                  <span class="checklist-item__change-label">${getChangeTrackMessage(item.id)}</span>
+                </label>
+              `
+              : "";
+
             return `
-              <label class="checklist-item ${uncheckedClass}" data-group-id="${group.id}" data-item-id="${item.id}">
-                <input type="checkbox" ${checked} data-group-id="${group.id}" data-item-id="${item.id}" />
-                <span>${item.label}</span>
-              </label>
+              <div class="checklist-item ${uncheckedClass}" data-group-id="${group.id}" data-item-id="${item.id}">
+                <label class="checklist-item__main">
+                  <input type="checkbox" ${checked} data-group-id="${group.id}" data-item-id="${item.id}" />
+                  <span>${item.label}</span>
+                </label>
+                ${changeToggle}
+              </div>
             `;
           })
           .join("");
@@ -421,6 +461,7 @@ export function createUi(root) {
   return {
     els,
     updateClock,
+    setSyncStatus,
     renderStatus,
     renderChecklist,
     renderSettings,

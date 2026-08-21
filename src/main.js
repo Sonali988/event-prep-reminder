@@ -2,42 +2,73 @@ import {
   applyTestMode,
   hasEndTimePassed,
   isReminderDue,
-  loadState,
+  loadStateAsync,
+  normalizeSavedState,
   resetChecklist,
-  saveState,
+  saveStateLocal,
   setItemChecked,
+  setItemChangeOccurred,
+  stampState,
   updateTestimonyTimers,
   updateServiceNotes,
 } from "./state.js";
 import { createUi } from "./ui.js";
-import { buildBackstageMessage, normalizeDuration } from "./testimonyTimers.js";
+import { buildBackstageMessage, formatDurationInput, normalizeDuration } from "./testimonyTimers.js";
 import {
   buildServiceNotesMessage,
   getDefaultServiceNotes,
   hasServiceNotes,
 } from "./serviceNotes.js";
+import {
+  fetchRemoteState,
+  getClientId,
+  markPushed,
+  probeSync,
+  pullRemoteStateNow,
+  scheduleRemoteSave,
+  setSyncCallbacks,
+  startSyncPolling,
+} from "./sync.js";
+import { exportChecklistPdf } from "./checklistPdf.js";
 
 const TEST_MODE = new URLSearchParams(window.location.search).get("test") === "1";
 
-let state = loadState();
-if (TEST_MODE) {
-  state = applyTestMode(state);
-  saveState(state);
-}
-
 const ui = createUi(document.getElementById("app"));
+let state = null;
 let tickTimer = null;
 let clockTimer = null;
+let pollTimer = null;
+
+function isUserEditing() {
+  const active = document.activeElement;
+  return (
+    active instanceof HTMLInputElement ||
+    active instanceof HTMLTextAreaElement ||
+    active instanceof HTMLSelectElement
+  );
+}
+
+function commitState(nextState) {
+  state = stampState(nextState, getClientId());
+  saveStateLocal(state);
+  scheduleRemoteSave(state);
+  return state;
+}
+
+function applyRemoteState(remote) {
+  state = normalizeSavedState(remote);
+  saveStateLocal(state);
+  markPushed(state.updatedAt);
+  ui.renderAll(state);
+}
 
 function persist(nextState) {
-  state = nextState;
-  saveState(state);
+  commitState(nextState);
   ui.renderAll(state);
 }
 
 function persistTestimonyTimers(testimonyTimers) {
-  state = updateTestimonyTimers(state, testimonyTimers);
-  saveState(state);
+  commitState(updateTestimonyTimers(state, testimonyTimers));
   ui.updateTestimonyPreview(state);
 }
 
@@ -50,8 +81,7 @@ function readServiceNotesFromDom() {
 }
 
 function persistServiceNotes(serviceNotes) {
-  state = updateServiceNotes(state, serviceNotes);
-  saveState(state);
+  commitState(updateServiceNotes(state, serviceNotes));
   ui.renderServiceNotes(state);
 }
 
@@ -145,8 +175,7 @@ function triggerFinalAlert() {
   }
 
   if (!state.finalAlertShown) {
-    state = { ...state, finalAlertShown: true };
-    saveState(state);
+    state = commitState({ ...state, finalAlertShown: true });
     ui.showFinalAlert();
   }
   ui.hideReminderModal();
@@ -157,8 +186,7 @@ function handleEndTimeReached() {
     return;
   }
 
-  state = { ...state, stopped: true };
-  saveState(state);
+  state = commitState({ ...state, stopped: true });
   triggerFinalAlert();
   stopReminders();
   ui.renderAll(state);
@@ -179,8 +207,7 @@ function showReminderIfDue() {
   if (isReminderDue(state)) {
     ui.renderReminderModal(state, new Date());
     ui.showReminderModal();
-    state = { ...state, lastReminderAt: new Date().toISOString() };
-    saveState(state);
+    state = commitState({ ...state, lastReminderAt: new Date().toISOString() });
   }
 
   ui.renderStatus(state);
@@ -217,167 +244,206 @@ function startTimers() {
   }
 }
 
-ui.els.checklist.addEventListener("change", (event) => {
-  const target = event.target;
-  if (!(target instanceof HTMLInputElement) || target.type !== "checkbox") {
-    return;
-  }
+function bindEvents() {
+  ui.els.checklist.addEventListener("change", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement) || target.type !== "checkbox") {
+      return;
+    }
 
-  const groupId = target.dataset.groupId;
-  const itemId = target.dataset.itemId;
-  if (!groupId || !itemId) {
-    return;
-  }
+    const groupId = target.dataset.groupId;
+    const itemId = target.dataset.itemId;
+    if (!groupId || !itemId) {
+      return;
+    }
 
-  persist(setItemChecked(state, groupId, itemId, target.checked));
-});
+    if (target.hasAttribute("data-change-toggle")) {
+      persist(setItemChangeOccurred(state, groupId, itemId, target.checked));
+      return;
+    }
 
-ui.els.endTimeInput.addEventListener("change", (event) => {
-  const value = event.target.value;
-  if (!value) {
-    return;
-  }
-
-  persist({
-    ...state,
-    endTime: value,
-    stopped: false,
-    finalAlertShown: false,
+    persist(setItemChecked(state, groupId, itemId, target.checked));
   });
-});
 
-ui.els.intervalRadios.forEach((radio) => {
-  radio.addEventListener("change", () => {
-    if (!radio.checked) {
+  ui.els.endTimeInput.addEventListener("change", (event) => {
+    const value = event.target.value;
+    if (!value) {
       return;
     }
 
     persist({
       ...state,
-      reminderIntervalMinutes: Number(radio.value),
+      endTime: value,
+      stopped: false,
+      finalAlertShown: false,
     });
   });
-});
 
-ui.els.remindersEnabledInput.addEventListener("change", (event) => {
-  const enabled = event.target.checked;
+  ui.els.intervalRadios.forEach((radio) => {
+    radio.addEventListener("change", () => {
+      if (!radio.checked) {
+        return;
+      }
 
-  persist({
-    ...state,
-    remindersEnabled: enabled,
-    lastReminderAt: enabled ? state.lastReminderAt : null,
+      persist({
+        ...state,
+        reminderIntervalMinutes: Number(radio.value),
+      });
+    });
   });
 
-  if (!enabled) {
-    ui.hideReminderModal();
-  } else if (!state.stopped && isReminderDue(state)) {
-    setTimeout(showReminderIfDue, 300);
-  }
-});
+  ui.els.remindersEnabledInput.addEventListener("change", (event) => {
+    const enabled = event.target.checked;
 
-ui.els.resetBtn.addEventListener("click", () => {
-  if (!window.confirm("Reset all checklist items? Settings will be kept.")) {
-    return;
-  }
+    persist({
+      ...state,
+      remindersEnabled: enabled,
+      lastReminderAt: enabled ? state.lastReminderAt : null,
+    });
 
-  persist(resetChecklist(state));
-  if (state.remindersEnabled && !state.stopped && isReminderDue(state)) {
-    setTimeout(showReminderIfDue, 300);
-  }
-});
+    if (!enabled) {
+      ui.hideReminderModal();
+    } else if (!state.stopped && isReminderDue(state)) {
+      setTimeout(showReminderIfDue, 300);
+    }
+  });
 
-ui.els.testimonyTimers.addEventListener("input", (event) => {
-  const target = event.target;
-  if (!(target instanceof HTMLInputElement)) {
-    return;
-  }
+  ui.els.resetBtn.addEventListener("click", () => {
+    if (!window.confirm("Reset the checklist and testimony timers? Settings and service notes will be kept.")) {
+      return;
+    }
 
-  persistTestimonyTimers(applyTestimonyInput(target));
-});
+    persist(resetChecklist(state));
+    if (state.remindersEnabled && !state.stopped && isReminderDue(state)) {
+      setTimeout(showReminderIfDue, 300);
+    }
+  });
 
-ui.els.testimonyTimers.addEventListener(
-  "blur",
-  (event) => {
+  document.getElementById("export-checklist-pdf-btn")?.addEventListener("click", () => {
+    exportChecklistPdf(state);
+  });
+
+  ui.els.testimonyTimers.addEventListener("input", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLInputElement)) {
       return;
     }
 
-    if (target.dataset.field !== "duration" && target.dataset.kind !== "intro") {
-      return;
+    if (target.dataset.field === "duration" || target.dataset.kind === "intro") {
+      const formatted = formatDurationInput(target.value);
+      if (formatted !== target.value) {
+        target.value = formatted;
+      }
     }
 
-    const normalized = normalizeDuration(target.value);
-    if (normalized === target.value) {
-      return;
-    }
-
-    target.value = normalized;
     persistTestimonyTimers(applyTestimonyInput(target));
-  },
-  true,
-);
+  });
 
-ui.els.testimonyTimers.addEventListener("click", (event) => {
-  const target = event.target;
-  if (!(target instanceof HTMLElement)) {
-    return;
-  }
+  ui.els.testimonyTimers.addEventListener(
+    "blur",
+    (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement)) {
+        return;
+      }
 
-  if (target.id === "copy-backstage-message-btn") {
-    copyBackstageMessage();
-  }
-});
+      if (target.dataset.field !== "duration" && target.dataset.kind !== "intro") {
+        return;
+      }
 
-const serviceNotesPanel = document.getElementById("service-notes-panel");
+      const normalized = normalizeDuration(target.value);
+      if (normalized === target.value) {
+        return;
+      }
 
-serviceNotesPanel?.addEventListener("input", (event) => {
-  const target = event.target;
-  if (!(target instanceof HTMLTextAreaElement)) {
-    return;
-  }
+      target.value = normalized;
+      persistTestimonyTimers(applyTestimonyInput(target));
+    },
+    true,
+  );
 
-  persistServiceNotes(readServiceNotesFromDom());
-});
-
-serviceNotesPanel?.addEventListener("click", (event) => {
-  const target = event.target;
-  if (!(target instanceof HTMLElement)) {
-    return;
-  }
-
-  if (target.id === "copy-service-notes-btn") {
-    copyServiceNotes();
-    return;
-  }
-
-  if (target.id === "clear-service-notes-btn") {
-    if (!hasServiceNotes(state.serviceNotes)) {
+  ui.els.testimonyTimers.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
       return;
     }
 
-    if (!window.confirm("Clear all service notes?")) {
+    if (target.id === "copy-backstage-message-btn") {
+      copyBackstageMessage();
+    }
+  });
+
+  const serviceNotesPanel = document.getElementById("service-notes-panel");
+
+  serviceNotesPanel?.addEventListener("input", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLTextAreaElement)) {
       return;
     }
 
-    persistServiceNotes(getDefaultServiceNotes());
+    persistServiceNotes(readServiceNotesFromDom());
+  });
+
+  serviceNotesPanel?.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    if (target.id === "copy-service-notes-btn") {
+      copyServiceNotes();
+      return;
+    }
+
+    if (target.id === "clear-service-notes-btn") {
+      if (!hasServiceNotes(state.serviceNotes)) {
+        return;
+      }
+
+      if (!window.confirm("Clear all service notes?")) {
+        return;
+      }
+
+      persistServiceNotes(getDefaultServiceNotes());
+    }
+  });
+
+  ui.els.reminderDismissBtn.addEventListener("click", () => {
+    ui.hideReminderModal();
+    ui.focusFirstUnchecked();
+  });
+
+  ui.els.finalAlertDismissBtn.addEventListener("click", () => {
+    ui.hideFinalAlert();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      onTick();
+      ui.updateClock();
+      pullRemoteStateNow(() => state, isUserEditing);
+    }
+  });
+}
+
+async function init() {
+  ui.setSyncStatus("loading");
+
+  setSyncCallbacks({
+    onStatusChange: (status, detail) => ui.setSyncStatus(status, detail),
+    onRemoteState: (remote) => applyRemoteState(remote),
+  });
+
+  await probeSync();
+  state = await loadStateAsync(fetchRemoteState);
+
+  if (TEST_MODE) {
+    state = commitState(applyTestMode(state));
   }
-});
 
-ui.els.reminderDismissBtn.addEventListener("click", () => {
-  ui.hideReminderModal();
-  ui.focusFirstUnchecked();
-});
+  bindEvents();
+  startTimers();
+  pollTimer = startSyncPolling(() => state, isUserEditing);
+}
 
-ui.els.finalAlertDismissBtn.addEventListener("click", () => {
-  ui.hideFinalAlert();
-});
-
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") {
-    onTick();
-    ui.updateClock();
-  }
-});
-
-startTimers();
+init();
