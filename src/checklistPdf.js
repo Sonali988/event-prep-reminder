@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { getGroupProgress } from "./state.js";
+import { getGroupProgress, getChangeTrackMessage, isChangeTrackedItem } from "./state.js";
 
 const IST_TIME_ZONE = "Asia/Kolkata";
 
@@ -36,6 +36,26 @@ function formatCheckedAt(item) {
   }
 
   return formatIstDateTime(item.checkedAt);
+}
+
+function formatChangeAt(item) {
+  if (!isChangeTrackedItem(item.id)) {
+    return "—";
+  }
+
+  if (!item.changeOccurred) {
+    return "No";
+  }
+
+  const message = getChangeTrackMessage(item.id);
+
+  if (!item.changeAt) {
+    return message ? `${message} (time not recorded)` : "Marked (time not recorded)";
+  }
+
+  return message
+    ? `${message}\n${formatIstDateTime(item.changeAt)}`
+    : formatIstDateTime(item.changeAt);
 }
 
 function buildFileName(now = new Date()) {
@@ -87,16 +107,17 @@ export function exportChecklistPdf(state, now = new Date()) {
     autoTable(doc, {
       startY,
       margin: { left: margin, right: margin },
-      head: [["#", "Item", "Status", "Checked at (IST)"]],
+      head: [["#", "Item", "Status", "Checked at (IST)", "Change at (IST)"]],
       body: group.items.map((item, index) => [
         String(index + 1),
         item.label,
         item.checked ? "Done" : "Pending",
         formatCheckedAt(item),
+        formatChangeAt(item),
       ]),
       styles: {
         font: "helvetica",
-        fontSize: 9,
+        fontSize: 8.5,
         cellPadding: 6,
         overflow: "linebreak",
       },
@@ -106,10 +127,11 @@ export function exportChecklistPdf(state, now = new Date()) {
         fontStyle: "bold",
       },
       columnStyles: {
-        0: { cellWidth: 28 },
-        1: { cellWidth: 230 },
-        2: { cellWidth: 58 },
-        3: { cellWidth: 150 },
+        0: { cellWidth: 24 },
+        1: { cellWidth: 170 },
+        2: { cellWidth: 48 },
+        3: { cellWidth: 118 },
+        4: { cellWidth: 118 },
       },
       theme: "grid",
     });

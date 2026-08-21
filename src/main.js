@@ -7,12 +7,13 @@ import {
   resetChecklist,
   saveStateLocal,
   setItemChecked,
+  setItemChangeOccurred,
   stampState,
   updateTestimonyTimers,
   updateServiceNotes,
 } from "./state.js";
 import { createUi } from "./ui.js";
-import { buildBackstageMessage, normalizeDuration } from "./testimonyTimers.js";
+import { buildBackstageMessage, formatDurationInput, normalizeDuration } from "./testimonyTimers.js";
 import {
   buildServiceNotesMessage,
   getDefaultServiceNotes,
@@ -256,6 +257,11 @@ function bindEvents() {
       return;
     }
 
+    if (target.hasAttribute("data-change-toggle")) {
+      persist(setItemChangeOccurred(state, groupId, itemId, target.checked));
+      return;
+    }
+
     persist(setItemChecked(state, groupId, itemId, target.checked));
   });
 
@@ -303,7 +309,7 @@ function bindEvents() {
   });
 
   ui.els.resetBtn.addEventListener("click", () => {
-    if (!window.confirm("Reset all checklist items? Settings will be kept.")) {
+    if (!window.confirm("Reset the checklist and testimony timers? Settings and service notes will be kept.")) {
       return;
     }
 
@@ -321,6 +327,13 @@ function bindEvents() {
     const target = event.target;
     if (!(target instanceof HTMLInputElement)) {
       return;
+    }
+
+    if (target.dataset.field === "duration" || target.dataset.kind === "intro") {
+      const formatted = formatDurationInput(target.value);
+      if (formatted !== target.value) {
+        target.value = formatted;
+      }
     }
 
     persistTestimonyTimers(applyTestimonyInput(target));

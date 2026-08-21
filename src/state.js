@@ -5,6 +5,65 @@ import {
 
 export const STORAGE_KEY = "event-prep-reminder-v1";
 
+export const CHANGE_TRACKED_ITEM_IDS = new Set([
+  "songs",
+  "songs_sequence",
+  "song_sequence",
+  "download_announcements",
+]);
+
+export const CHANGE_TRACK_MESSAGES = {
+  songs: "Change before service",
+  songs_sequence: "Change before service",
+  song_sequence: "Change before service",
+  download_announcements: "Received during service",
+};
+
+export function isChangeTrackedItem(itemId) {
+  return CHANGE_TRACKED_ITEM_IDS.has(itemId);
+}
+
+export function getChangeTrackMessage(itemId) {
+  return CHANGE_TRACK_MESSAGES[itemId] || "";
+}
+
+function withChangeTrackingFields(item) {
+  if (!isChangeTrackedItem(item.id)) {
+    return item;
+  }
+
+  return {
+    ...item,
+    changeOccurred: false,
+    changeAt: null,
+  };
+}
+
+function mergeChecklistItem(defaultItem, savedItem) {
+  if (!savedItem) {
+    return withChangeTrackingFields(defaultItem);
+  }
+
+  const merged = {
+    ...defaultItem,
+    checked: Boolean(savedItem.checked),
+    checkedAt:
+      savedItem.checked && typeof savedItem.checkedAt === "string"
+        ? savedItem.checkedAt
+        : null,
+  };
+
+  if (isChangeTrackedItem(defaultItem.id)) {
+    merged.changeOccurred = Boolean(savedItem.changeOccurred);
+    merged.changeAt =
+      merged.changeOccurred && typeof savedItem.changeAt === "string"
+        ? savedItem.changeAt
+        : null;
+  }
+
+  return merged;
+}
+
 export function getDefaultTestimonyTimers() {
   return {
     introTimer: "",
@@ -63,8 +122,14 @@ export function getDefaultGroups() {
         { id: "offering_video", label: "Offering video", checked: false },
         { id: "testimonies", label: "Testimonies", checked: false },
         { id: "testimonies_sequence", label: "Testimonies sequence", checked: false },
-        { id: "songs", label: "Songs", checked: false },
-        { id: "songs_sequence", label: "Songs sequence", checked: false },
+        { id: "songs", label: "Songs", checked: false, changeOccurred: false, changeAt: null },
+        {
+          id: "songs_sequence",
+          label: "Songs sequence",
+          checked: false,
+          changeOccurred: false,
+          changeAt: null,
+        },
         {
           id: "last_week_media",
           label: "Videos/photos from last week's event",
@@ -99,7 +164,13 @@ export function getDefaultGroups() {
       id: "prep_before_service",
       title: "Preparation before service",
       items: [
-        { id: "song_sequence", label: "Check song sequence", checked: false },
+        {
+          id: "song_sequence",
+          label: "Check song sequence",
+          checked: false,
+          changeOccurred: false,
+          changeAt: null,
+        },
         {
           id: "testimonies_sequence",
           label: "Check testimonies sequence",
@@ -150,6 +221,8 @@ export function getDefaultGroups() {
           id: "download_announcements",
           label: "Download announcement posters/videos",
           checked: false,
+          changeOccurred: false,
+          changeAt: null,
         },
         {
           id: "adjust_propresentor_height",
@@ -268,16 +341,7 @@ function mergeGroups(savedGroups, defaultGroups) {
       ...defaultGroup,
       items: defaultGroup.items.map((defaultItem) => {
         const savedItem = savedGroup.items?.find((item) => item.id === defaultItem.id);
-        return savedItem
-          ? {
-              ...defaultItem,
-              checked: Boolean(savedItem.checked),
-              checkedAt:
-                savedItem.checked && typeof savedItem.checkedAt === "string"
-                  ? savedItem.checkedAt
-                  : null,
-            }
-          : defaultItem;
+        return mergeChecklistItem(defaultItem, savedItem);
       }),
     };
   });
@@ -383,6 +447,7 @@ export function resetChecklist(state) {
   return {
     ...state,
     groups: getDefaultGroups(),
+    testimonyTimers: getDefaultTestimonyTimers(),
     lastReminderAt: null,
     stopped: false,
     finalAlertShown: false,
@@ -403,6 +468,32 @@ export function setItemChecked(state, groupId, itemId, checked) {
                   ...item,
                   checked,
                   checkedAt: checked ? new Date().toISOString() : null,
+                }
+              : item,
+          ),
+        },
+    ),
+  };
+}
+
+export function setItemChangeOccurred(state, groupId, itemId, changeOccurred) {
+  if (!isChangeTrackedItem(itemId)) {
+    return state;
+  }
+
+  return {
+    ...state,
+    groups: state.groups.map((group) =>
+      group.id !== groupId
+        ? group
+        : {
+          ...group,
+          items: group.items.map((item) =>
+            item.id === itemId
+              ? {
+                  ...item,
+                  changeOccurred,
+                  changeAt: changeOccurred ? new Date().toISOString() : null,
                 }
               : item,
           ),
