@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { getGroupProgress, getChangeTrackMessage, isChangeTrackedItem } from "./state.js";
+import { getGroupProgress, getChangeTrackMessage, getVisibleGroupItems, isChangeTrackedItem } from "./state.js";
 
 const IST_TIME_ZONE = "Asia/Kolkata";
 
@@ -108,7 +108,7 @@ export function exportChecklistPdf(state, now = new Date()) {
       startY,
       margin: { left: margin, right: margin },
       head: [["#", "Item", "Status", "Checked at (IST)", "Change at (IST)"]],
-      body: group.items.map((item, index) => [
+      body: getVisibleGroupItems(group).map((item, index) => [
         String(index + 1),
         item.label,
         item.checked ? "Done" : "Pending",

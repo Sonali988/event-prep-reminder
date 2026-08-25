@@ -846,6 +846,15 @@ body {
   background: var(--warn-muted);
 }
 
+.checklist-item--nested {
+  margin-left: 1.25rem;
+  border-left: 2px solid var(--accent-border);
+}
+
+.checklist-item--nested .checklist-item__main span {
+  font-size: 0.96rem;
+}
+
 .checklist-item__main input,
 .checklist-item__change-input {
   width: 1.15rem;

@@ -6,6 +6,7 @@ import {
   hasEndTimePassed,
   isAllChecked,
   isChangeTrackedItem,
+  isChecklistItemVisible,
   getChangeTrackMessage,
   parseEndTimeToday,
 } from "./state.js";
@@ -186,9 +187,11 @@ export function createUi(root) {
         const complete = done === total;
 
         const itemsHtml = group.items
+          .filter((item) => isChecklistItemVisible(item, group))
           .map((item) => {
             const checked = item.checked ? "checked" : "";
             const uncheckedClass = item.checked ? "" : "checklist-item--unchecked";
+            const nestedClass = item.parentItemId ? "checklist-item--nested" : "";
             const changeToggle = isChangeTrackedItem(item.id)
               ? `
                 <label class="checklist-item__change" title="${getChangeTrackMessage(item.id)}">
@@ -206,7 +209,7 @@ export function createUi(root) {
               : "";
 
             return `
-              <div class="checklist-item ${uncheckedClass}" data-group-id="${group.id}" data-item-id="${item.id}">
+              <div class="checklist-item ${uncheckedClass} ${nestedClass}" data-group-id="${group.id}" data-item-id="${item.id}">
                 <label class="checklist-item__main">
                   <input type="checkbox" ${checked} data-group-id="${group.id}" data-item-id="${item.id}" />
                   <span>${item.label}</span>
