@@ -135,6 +135,36 @@ export function getDefaultGroups() {
           label: "Videos/photos from last week's event",
           checked: false,
         },
+        {
+          id: "poster_graphic",
+          label: "Check Poster Graphic",
+          checked: false,
+          parentItemId: "last_week_media",
+        },
+        {
+          id: "qr_code",
+          label: "Check QR",
+          checked: false,
+          parentItemId: "last_week_media",
+        },
+        {
+          id: "contact_number",
+          label: "Check Contact Number",
+          checked: false,
+          parentItemId: "last_week_media",
+        },
+        {
+          id: "address",
+          label: "Check address",
+          checked: false,
+          parentItemId: "last_week_media",
+        },
+        {
+          id: "phone_number",
+          label: "Check Phone number",
+          checked: false,
+          parentItemId: "last_week_media",
+        },
       ],
     },
     {
@@ -158,6 +188,9 @@ export function getDefaultGroups() {
           label: "Bible verse card app",
           checked: false,
         },
+        { id: "charger_connected", label: "Charger connected", checked: false },
+        { id: "audio_cable_connected", label: "Audio cable connected", checked: false },
+        { id: "hdmi_cable_connected", label: "HDMI cable connected", checked: false },
       ],
     },
     {
@@ -170,6 +203,11 @@ export function getDefaultGroups() {
           checked: false,
           changeOccurred: false,
           changeAt: null,
+        },
+        {
+          id: "songs_theme_hindi",
+          label: "Check song theme (Hindi up, no black background)",
+          checked: false,
         },
         {
           id: "testimonies_sequence",
@@ -189,11 +227,6 @@ export function getDefaultGroups() {
         {
           id: "stop_video_loops",
           label: "Stop loop for intro, testimonies & announcement videos",
-          checked: false,
-        },
-        {
-          id: "songs_theme_hindi",
-          label: "Check songs theme (Hindi up, no black background)",
           checked: false,
         },
         {
@@ -347,11 +380,24 @@ function mergeGroups(savedGroups, defaultGroups) {
   });
 }
 
+export function isChecklistItemVisible(item, group) {
+  if (!item.parentItemId) {
+    return true;
+  }
+
+  const parent = group.items.find((groupItem) => groupItem.id === item.parentItemId);
+  return Boolean(parent?.checked);
+}
+
+export function getVisibleGroupItems(group) {
+  return group.items.filter((item) => isChecklistItemVisible(item, group));
+}
+
 export function getUncheckedItems(state) {
   const items = [];
 
   for (const group of state.groups) {
-    for (const item of group.items) {
+    for (const item of getVisibleGroupItems(group)) {
       if (!item.checked) {
         items.push({
           groupId: group.id,
@@ -369,7 +415,7 @@ export function getUncheckedItems(state) {
 export function getUncheckedGroups(state) {
   return state.groups
     .map((group) => {
-      const uncheckedItems = group.items.filter((item) => !item.checked);
+      const uncheckedItems = getVisibleGroupItems(group).filter((item) => !item.checked);
       return {
         id: group.id,
         title: group.title,
@@ -385,8 +431,9 @@ export function isAllChecked(state) {
 }
 
 export function getGroupProgress(group) {
-  const total = group.items.length;
-  const done = group.items.filter((item) => item.checked).length;
+  const visibleItems = getVisibleGroupItems(group);
+  const total = visibleItems.length;
+  const done = visibleItems.filter((item) => item.checked).length;
   return { done, total };
 }
 
@@ -457,22 +504,31 @@ export function resetChecklist(state) {
 export function setItemChecked(state, groupId, itemId, checked) {
   return {
     ...state,
-    groups: state.groups.map((group) =>
-      group.id !== groupId
-        ? group
-        : {
-          ...group,
-          items: group.items.map((item) =>
-            item.id === itemId
-              ? {
-                  ...item,
-                  checked,
-                  checkedAt: checked ? new Date().toISOString() : null,
-                }
-              : item,
-          ),
-        },
-    ),
+    groups: state.groups.map((group) => {
+      if (group.id !== groupId) {
+        return group;
+      }
+
+      let items = group.items.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              checked,
+              checkedAt: checked ? new Date().toISOString() : null,
+            }
+          : item,
+      );
+
+      if (!checked) {
+        items = items.map((item) =>
+          item.parentItemId === itemId
+            ? { ...item, checked: false, checkedAt: null }
+            : item,
+        );
+      }
+
+      return { ...group, items };
+    }),
   };
 }
 
