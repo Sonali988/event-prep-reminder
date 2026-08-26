@@ -117,6 +117,7 @@ export function getDefaultGroups() {
       id: "media",
       title: "Do you have all media ready?",
       items: [
+        { id: "service_folder", label: "Folder created for service", checked: false },
         { id: "intro_video", label: "Intro video", checked: false },
         { id: "thumbnail", label: "Thumbnail", checked: false },
         { id: "offering_video", label: "Offering video", checked: false },
@@ -164,6 +165,13 @@ export function getDefaultGroups() {
           label: "Check Phone number",
           checked: false,
           parentItemId: "last_week_media",
+        },
+        { id: "green_screen_poster", label: "Green Screen poster", checked: false },
+        { id: "thank_you_poster", label: "Thank You poster", checked: false },
+        {
+          id: "newcomers_posters_video",
+          label: "New comers posters and video",
+          checked: false,
         },
       ],
     },
@@ -224,6 +232,7 @@ export function getDefaultGroups() {
           label: "Mute all apps except ProPresenter",
           checked: false,
         },
+        { id: "whatsapp_muted", label: "WhatsApp is mute", checked: false },
         {
           id: "stop_video_loops",
           label: "Stop loop for intro, testimonies & announcement videos",
