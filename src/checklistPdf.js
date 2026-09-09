@@ -85,11 +85,10 @@ export function exportChecklistPdf(state, now = new Date()) {
   doc.setFontSize(10);
   doc.setTextColor(80, 80, 80);
   doc.text(`Generated: ${formatIstDateTime(now)}`, margin, 76);
-  doc.text(`Service end time: ${state.endTime}`, margin, 90);
-  doc.text(`Progress: ${completedItems} / ${totalItems} completed`, margin, 104);
+  doc.text(`Progress: ${completedItems} / ${totalItems} completed`, margin, 90);
   doc.setTextColor(0, 0, 0);
 
-  let startY = 124;
+  let startY = 110;
 
   for (const group of state.groups) {
     const { done, total } = getGroupProgress(group);

@@ -1,7 +1,4 @@
 import {
-  applyTestMode,
-  hasEndTimePassed,
-  isReminderDue,
   loadStateAsync,
   normalizeSavedState,
   resetChecklist,
@@ -31,13 +28,64 @@ import {
 } from "./sync.js";
 import { exportChecklistPdf } from "./checklistPdf.js";
 
-const TEST_MODE = new URLSearchParams(window.location.search).get("test") === "1";
+const ACTIVE_PANEL_KEY = "service-prep-active-panel";
 
 const ui = createUi(document.getElementById("app"));
 let state = null;
-let tickTimer = null;
 let clockTimer = null;
 let pollTimer = null;
+
+function switchPanel(panelId) {
+  ui.els.appNav?.querySelectorAll(".app-nav__tab").forEach((tab) => {
+    const active = tab.dataset.panel === panelId;
+    tab.classList.toggle("app-nav__tab--active", active);
+    tab.setAttribute("aria-selected", String(active));
+  });
+
+  document.querySelectorAll(".app-panel").forEach((panel) => {
+    const active = panel.id === `panel-${panelId}`;
+    panel.classList.toggle("app-panel--active", active);
+    panel.hidden = !active;
+  });
+
+  try {
+    localStorage.setItem(ACTIVE_PANEL_KEY, panelId);
+  } catch {
+    // Ignore storage errors in private browsing.
+  }
+}
+
+function restoreActivePanel() {
+  try {
+    const saved = localStorage.getItem(ACTIVE_PANEL_KEY);
+    if (saved && document.getElementById(`panel-${saved}`)) {
+      switchPanel(saved);
+    }
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
+function setActionsMenuOpen(open) {
+  const trigger = document.getElementById("actions-menu-btn");
+  const popover = document.getElementById("actions-menu-popover");
+
+  if (!trigger || !popover) {
+    return;
+  }
+
+  trigger.setAttribute("aria-expanded", String(open));
+  popover.classList.toggle("hidden", !open);
+}
+
+function closeActionsMenu() {
+  setActionsMenuOpen(false);
+}
+
+function toggleActionsMenu() {
+  const popover = document.getElementById("actions-menu-popover");
+  setActionsMenuOpen(popover?.classList.contains("hidden"));
+}
 
 function isUserEditing() {
   const active = document.activeElement;
@@ -64,7 +112,8 @@ function applyRemoteState(remote) {
 
 function persist(nextState) {
   commitState(nextState);
-  ui.renderAll(state);
+  ui.renderChecklist(state);
+  ui.renderStatus(state);
 }
 
 function persistTestimonyTimers(testimonyTimers) {
@@ -83,6 +132,7 @@ function readServiceNotesFromDom() {
 function persistServiceNotes(serviceNotes) {
   commitState(updateServiceNotes(state, serviceNotes));
   ui.renderServiceNotes(state);
+  ui.renderStatus(state);
 }
 
 function showServiceNotesStatus(message, isError = false) {
@@ -161,90 +211,36 @@ async function copyBackstageMessage() {
   }
 }
 
-function stopReminders() {
-  if (tickTimer) {
-    clearInterval(tickTimer);
-    tickTimer = null;
-  }
-}
-
-function triggerFinalAlert() {
-  if (!state.remindersEnabled) {
-    ui.hideReminderModal();
-    return;
-  }
-
-  if (!state.finalAlertShown) {
-    state = commitState({ ...state, finalAlertShown: true });
-    ui.showFinalAlert();
-  }
-  ui.hideReminderModal();
-}
-
-function handleEndTimeReached() {
-  if (state.stopped) {
-    return;
-  }
-
-  state = commitState({ ...state, stopped: true });
-  triggerFinalAlert();
-  stopReminders();
-  ui.renderAll(state);
-}
-
-function showReminderIfDue() {
-  if (state.stopped || hasEndTimePassed(state.endTime)) {
-    handleEndTimeReached();
-    return;
-  }
-
-  if (!state.remindersEnabled) {
-    ui.hideReminderModal();
-    ui.renderStatus(state);
-    return;
-  }
-
-  if (isReminderDue(state)) {
-    ui.renderReminderModal(state, new Date());
-    ui.showReminderModal();
-    state = commitState({ ...state, lastReminderAt: new Date().toISOString() });
-  }
-
-  ui.renderStatus(state);
-}
-
-function onTick() {
-  const now = new Date();
-
-  if (hasEndTimePassed(state.endTime, now)) {
-    handleEndTimeReached();
-    return;
-  }
-
-  showReminderIfDue();
-  ui.renderStatus(state, now);
-}
-
-function startTimers() {
-  ui.updateClock();
-  clockTimer = setInterval(() => ui.updateClock(), 1000);
-
-  const tickMs = TEST_MODE ? 5000 : 60000;
-  tickTimer = setInterval(onTick, tickMs);
-
-  ui.renderAll(state);
-
-  if (hasEndTimePassed(state.endTime)) {
-    handleEndTimeReached();
-    return;
-  }
-
-  if (state.remindersEnabled && isReminderDue(state)) {
-    setTimeout(showReminderIfDue, 500);
-  }
-}
-
 function bindEvents() {
+  const actionsMenu = document.getElementById("actions-menu");
+  const actionsMenuBtn = document.getElementById("actions-menu-btn");
+
+  actionsMenuBtn?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleActionsMenu();
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!actionsMenu?.contains(event.target)) {
+      closeActionsMenu();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeActionsMenu();
+    }
+  });
+
+  ui.els.appNav?.addEventListener("click", (event) => {
+    const tab = event.target.closest(".app-nav__tab");
+    if (!tab?.dataset.panel) {
+      return;
+    }
+
+    switchPanel(tab.dataset.panel);
+  });
+
   ui.els.checklist.addEventListener("change", (event) => {
     const target = event.target;
     if (!(target instanceof HTMLInputElement) || target.type !== "checkbox") {
@@ -265,61 +261,19 @@ function bindEvents() {
     persist(setItemChecked(state, groupId, itemId, target.checked));
   });
 
-  ui.els.endTimeInput.addEventListener("change", (event) => {
-    const value = event.target.value;
-    if (!value) {
-      return;
-    }
-
-    persist({
-      ...state,
-      endTime: value,
-      stopped: false,
-      finalAlertShown: false,
-    });
-  });
-
-  ui.els.intervalRadios.forEach((radio) => {
-    radio.addEventListener("change", () => {
-      if (!radio.checked) {
-        return;
-      }
-
-      persist({
-        ...state,
-        reminderIntervalMinutes: Number(radio.value),
-      });
-    });
-  });
-
-  ui.els.remindersEnabledInput.addEventListener("change", (event) => {
-    const enabled = event.target.checked;
-
-    persist({
-      ...state,
-      remindersEnabled: enabled,
-      lastReminderAt: enabled ? state.lastReminderAt : null,
-    });
-
-    if (!enabled) {
-      ui.hideReminderModal();
-    } else if (!state.stopped && isReminderDue(state)) {
-      setTimeout(showReminderIfDue, 300);
-    }
-  });
-
   ui.els.resetBtn.addEventListener("click", () => {
-    if (!window.confirm("Reset the checklist and testimony timers? Settings and service notes will be kept.")) {
+    closeActionsMenu();
+
+    if (!window.confirm("Reset the checklist and testimony timers? Service notes will be kept.")) {
       return;
     }
 
     persist(resetChecklist(state));
-    if (state.remindersEnabled && !state.stopped && isReminderDue(state)) {
-      setTimeout(showReminderIfDue, 300);
-    }
+    ui.renderTestimonyTimers(state);
   });
 
   document.getElementById("export-checklist-pdf-btn")?.addEventListener("click", () => {
+    closeActionsMenu();
     exportChecklistPdf(state);
   });
 
@@ -408,18 +362,8 @@ function bindEvents() {
     }
   });
 
-  ui.els.reminderDismissBtn.addEventListener("click", () => {
-    ui.hideReminderModal();
-    ui.focusFirstUnchecked();
-  });
-
-  ui.els.finalAlertDismissBtn.addEventListener("click", () => {
-    ui.hideFinalAlert();
-  });
-
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
-      onTick();
       ui.updateClock();
       pullRemoteStateNow(() => state, isUserEditing);
     }
@@ -437,12 +381,11 @@ async function init() {
   await probeSync();
   state = await loadStateAsync(fetchRemoteState);
 
-  if (TEST_MODE) {
-    state = commitState(applyTestMode(state));
-  }
-
   bindEvents();
-  startTimers();
+  restoreActivePanel();
+  ui.updateClock();
+  clockTimer = setInterval(() => ui.updateClock(), 1000);
+  ui.renderAll(state);
   pollTimer = startSyncPolling(() => state, isUserEditing);
 }
 
