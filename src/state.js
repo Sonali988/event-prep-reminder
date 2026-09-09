@@ -289,12 +289,6 @@ export function getDefaultGroups() {
 
 export function getDefaultState() {
   return {
-    endTime: "09:45",
-    reminderIntervalMinutes: 15,
-    remindersEnabled: true,
-    lastReminderAt: null,
-    stopped: false,
-    finalAlertShown: false,
     groups: getDefaultGroups(),
     testimonyTimers: getDefaultTestimonyTimers(),
     serviceNotes: getDefaultServiceNotes(),
@@ -311,17 +305,9 @@ export function normalizeSavedState(saved) {
   }
 
   return {
-    ...defaults,
-    ...saved,
     groups: mergeGroups(saved.groups, defaults.groups),
-    reminderIntervalMinutes: [10, 15, 20].includes(saved.reminderIntervalMinutes)
-      ? saved.reminderIntervalMinutes
-      : 15,
-    remindersEnabled: saved.remindersEnabled !== false,
     testimonyTimers: mergeTestimonyTimers(saved.testimonyTimers),
     serviceNotes: mergeServiceNotes(saved.serviceNotes),
-    stopped: Boolean(saved.stopped),
-    finalAlertShown: Boolean(saved.finalAlertShown),
     updatedAt: typeof saved.updatedAt === "string" ? saved.updatedAt : null,
     updatedBy: typeof saved.updatedBy === "string" ? saved.updatedBy : null,
   };
@@ -407,43 +393,6 @@ export function getVisibleGroupItems(group) {
   return group.items.filter((item) => isChecklistItemVisible(item, group));
 }
 
-export function getUncheckedItems(state) {
-  const items = [];
-
-  for (const group of state.groups) {
-    for (const item of getVisibleGroupItems(group)) {
-      if (!item.checked) {
-        items.push({
-          groupId: group.id,
-          groupTitle: group.title,
-          itemId: item.id,
-          label: item.label,
-        });
-      }
-    }
-  }
-
-  return items;
-}
-
-export function getUncheckedGroups(state) {
-  return state.groups
-    .map((group) => {
-      const uncheckedItems = getVisibleGroupItems(group).filter((item) => !item.checked);
-      return {
-        id: group.id,
-        title: group.title,
-        items: uncheckedItems,
-        ...getGroupProgress(group),
-      };
-    })
-    .filter((group) => group.items.length > 0);
-}
-
-export function isAllChecked(state) {
-  return getUncheckedItems(state).length === 0;
-}
-
 export function getGroupProgress(group) {
   const visibleItems = getVisibleGroupItems(group);
   const total = visibleItems.length;
@@ -451,67 +400,11 @@ export function getGroupProgress(group) {
   return { done, total };
 }
 
-export function parseEndTimeToday(endTime, now = new Date()) {
-  const [hours, minutes] = endTime.split(":").map(Number);
-  const end = new Date(now);
-  end.setHours(hours, minutes, 0, 0);
-  return end;
-}
-
-export function hasEndTimePassed(endTime, now = new Date()) {
-  return now >= parseEndTimeToday(endTime, now);
-}
-
-export function getMsUntilEnd(endTime, now = new Date()) {
-  return parseEndTimeToday(endTime, now).getTime() - now.getTime();
-}
-
-export function getMsUntilNextReminder(state, now = new Date()) {
-  if (!state.lastReminderAt) {
-    return 0;
-  }
-
-  const intervalMs = state.reminderIntervalMinutes * 60 * 1000;
-  const elapsed = now.getTime() - new Date(state.lastReminderAt).getTime();
-  return Math.max(0, intervalMs - elapsed);
-}
-
-export function isReminderDue(state, now = new Date()) {
-  if (!state.remindersEnabled || state.stopped || isAllChecked(state)) {
-    return false;
-  }
-
-  if (!state.lastReminderAt) {
-    return true;
-  }
-
-  return getMsUntilNextReminder(state, now) === 0;
-}
-
-export function applyTestMode(state) {
-  const now = new Date();
-  const end = new Date(now.getTime() + 3 * 60 * 1000);
-  const hours = String(end.getHours()).padStart(2, "0");
-  const minutes = String(end.getMinutes()).padStart(2, "0");
-
-  return {
-    ...state,
-    endTime: `${hours}:${minutes}`,
-    reminderIntervalMinutes: 1,
-    lastReminderAt: null,
-    stopped: false,
-    finalAlertShown: false,
-  };
-}
-
 export function resetChecklist(state) {
   return {
     ...state,
     groups: getDefaultGroups(),
     testimonyTimers: getDefaultTestimonyTimers(),
-    lastReminderAt: null,
-    stopped: false,
-    finalAlertShown: false,
   };
 }
 

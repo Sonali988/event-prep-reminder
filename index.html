@@ -4,195 +4,173 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/fav.png" type="image/png" />
-    <title>Service Prep</title>
+    <title>Live System Checklist</title>
     <link rel="stylesheet" href="/styles/main.css" />
   </head>
   <body>
     <div id="app">
       <header class="header">
-        <div class="header__titles">
-          <h1 class="header__title">Event Prep Reminder</h1>
-          <p class="header__subtitle">Stay on track before the service starts</p>
+        <div class="header__top">
+          <div class="header__titles">
+            <h1 class="header__title">Live System Checklist</h1>
+            <p class="header__subtitle">Preparation checklist for service day</p>
+          </div>
+          <div class="header__meta" aria-live="polite">
+            <time id="live-clock" class="header__clock-time">--:--:--</time>
+            <div class="header__utilities">
+              <span class="sync-status sync-status--loading" id="sync-status" title="Shared sync status">Loading…</span>
+              <div class="actions-menu" id="actions-menu">
+                <button
+                  type="button"
+                  class="actions-menu__trigger"
+                  id="actions-menu-btn"
+                  aria-label="More actions"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  aria-controls="actions-menu-popover"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <circle cx="12" cy="5" r="2" />
+                    <circle cx="12" cy="12" r="2" />
+                    <circle cx="12" cy="19" r="2" />
+                  </svg>
+                </button>
+                <div class="actions-menu__popover hidden" id="actions-menu-popover" role="menu" aria-label="Checklist actions">
+                  <button type="button" class="actions-menu__item" role="menuitem" id="export-checklist-pdf-btn">
+                    Download checklist PDF
+                  </button>
+                  <button type="button" class="actions-menu__item actions-menu__item--danger" role="menuitem" id="reset-checklist-btn">
+                    Reset checklist
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="header__clock" aria-live="polite">
-          <span class="header__clock-label">Now</span>
-          <time id="live-clock" class="header__clock-time">--:--:--</time>
-          <span class="sync-status sync-status--loading" id="sync-status" title="Shared sync status">Loading…</span>
+
+        <div class="header__progress" id="header-progress">
+          <div class="progress-bar" aria-hidden="true">
+            <div class="progress-bar__fill" id="progress-bar-fill" style="width: 0%"></div>
+          </div>
+          <p class="header__progress-text" id="status-strip">Loading…</p>
         </div>
       </header>
 
-      <section class="status-strip" id="status-strip" aria-live="polite">
-        Loading…
-      </section>
-
-      <section class="testimony-timers" id="testimony-timers" aria-label="Testimony timers"></section>
-
-      <div class="checklist-toolbar">
-        <div class="checklist-toolbar__text">
-          <h2 class="checklist-toolbar__title">Preparation checklist</h2>
-          <p class="checklist-toolbar__hint">Toggle the note beside an item when a change happens; PDF includes those timestamps in IST.</p>
-        </div>
-        <button type="button" class="btn btn--secondary" id="export-checklist-pdf-btn">
-          Download checklist PDF
+      <nav class="app-nav" role="tablist" aria-label="Sections">
+        <button
+          type="button"
+          class="app-nav__tab app-nav__tab--active"
+          role="tab"
+          id="tab-checklist"
+          aria-selected="true"
+          aria-controls="panel-checklist"
+          data-panel="checklist"
+        >
+          Checklist
+          <span class="app-nav__badge" id="checklist-tab-badge" hidden></span>
         </button>
-      </div>
+        <button
+          type="button"
+          class="app-nav__tab"
+          role="tab"
+          id="tab-timers"
+          aria-selected="false"
+          aria-controls="panel-timers"
+          data-panel="timers"
+        >
+          Timers
+        </button>
+        <button
+          type="button"
+          class="app-nav__tab"
+          role="tab"
+          id="tab-notes"
+          aria-selected="false"
+          aria-controls="panel-notes"
+          data-panel="notes"
+        >
+          Notes
+          <span class="app-nav__badge app-nav__badge--dot" id="notes-tab-badge" hidden aria-label="Notes added"></span>
+        </button>
+      </nav>
 
-      <main class="checklist" id="checklist" aria-label="Preparation checklist"></main>
+      <div class="app-panels">
+        <section
+          class="app-panel app-panel--active"
+          id="panel-checklist"
+          role="tabpanel"
+          aria-labelledby="tab-checklist"
+          tabindex="0"
+        >
+          <main class="checklist" id="checklist" aria-label="Preparation checklist"></main>
+        </section>
 
-      <details class="settings service-notes footer-panel" id="service-notes-panel">
-        <summary class="settings__summary">
-          <span class="settings__summary-icon" aria-hidden="true">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 20h9" />
-              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-            </svg>
-          </span>
-          <span class="settings__summary-text">
-            <strong>Service notes</strong>
-            <small id="service-notes-preview">No notes recorded yet</small>
-          </span>
-          <span class="settings__chevron" aria-hidden="true"></span>
-        </summary>
+        <section
+          class="app-panel"
+          id="panel-timers"
+          role="tabpanel"
+          aria-labelledby="tab-timers"
+          tabindex="0"
+          hidden
+        >
+          <section class="testimony-timers" id="testimony-timers" aria-label="Testimony timers"></section>
+        </section>
 
-        <div class="service-notes__body">
-          <p class="service-notes__intro">
-            Record remarks, observations, and challenges from today&apos;s service to discuss with the team later.
-          </p>
+        <section
+          class="app-panel"
+          id="panel-notes"
+          role="tabpanel"
+          aria-labelledby="tab-notes"
+          tabindex="0"
+          hidden
+        >
+          <div class="service-notes" id="service-notes-panel">
+            <div class="service-notes__header">
+              <h2 class="service-notes__title">Service notes</h2>
+              <p class="service-notes__intro">
+                Capture remarks, observations, and challenges to discuss with the team later.
+              </p>
+            </div>
 
-          <div class="service-notes__grid">
-            <label class="service-notes__field">
-              <span class="service-notes__label">Remarks</span>
-              <span class="service-notes__hint">General comments or follow-ups from the service.</span>
-              <textarea
-                id="service-remarks-input"
-                rows="5"
-                placeholder="e.g. Intro video started late, offering flow was smooth…"
-              ></textarea>
-            </label>
+            <div class="service-notes__grid">
+              <label class="service-notes__field">
+                <span class="service-notes__label">Remarks</span>
+                <span class="service-notes__hint">General comments or follow-ups from the service.</span>
+                <textarea
+                  id="service-remarks-input"
+                  rows="5"
+                  placeholder="e.g. Intro video started late, offering flow was smooth…"
+                ></textarea>
+              </label>
 
-            <label class="service-notes__field">
-              <span class="service-notes__label">Observations</span>
-              <span class="service-notes__hint">Things you noticed during prep or the service.</span>
-              <textarea
-                id="service-observations-input"
-                rows="5"
-                placeholder="e.g. Lyrics timing was off on song 3, backstage comms were clear…"
-              ></textarea>
-            </label>
+              <label class="service-notes__field">
+                <span class="service-notes__label">Observations</span>
+                <span class="service-notes__hint">Things you noticed during prep or the service.</span>
+                <textarea
+                  id="service-observations-input"
+                  rows="5"
+                  placeholder="e.g. Lyrics timing was off on song 3, backstage comms were clear…"
+                ></textarea>
+              </label>
 
-            <label class="service-notes__field">
-              <span class="service-notes__label">Challenges</span>
-              <span class="service-notes__hint">Issues to address in the next team discussion.</span>
-              <textarea
-                id="service-challenges-input"
-                rows="5"
-                placeholder="e.g. ProPresenter height needs preset, backup mic check missing…"
-              ></textarea>
-            </label>
+              <label class="service-notes__field">
+                <span class="service-notes__label">Challenges</span>
+                <span class="service-notes__hint">Issues to address in the next team discussion.</span>
+                <textarea
+                  id="service-challenges-input"
+                  rows="5"
+                  placeholder="e.g. ProPresenter height needs preset, backup mic check missing…"
+                ></textarea>
+              </label>
+            </div>
+
+            <div class="service-notes__actions">
+              <button type="button" class="btn btn--primary" id="copy-service-notes-btn">Copy notes</button>
+              <button type="button" class="btn btn--ghost-danger" id="clear-service-notes-btn">Clear notes</button>
+              <p class="service-notes__status hidden" id="service-notes-status" role="status"></p>
+            </div>
           </div>
-
-          <div class="service-notes__actions">
-            <button type="button" class="btn btn--primary" id="copy-service-notes-btn">Copy notes</button>
-            <button type="button" class="btn btn--ghost-danger" id="clear-service-notes-btn">Clear notes</button>
-            <p class="service-notes__status hidden" id="service-notes-status" role="status"></p>
-          </div>
-        </div>
-      </details>
-
-      <details class="settings footer-panel" id="settings-panel">
-        <summary class="settings__summary">
-          <span class="settings__summary-icon" aria-hidden="true">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-            </svg>
-          </span>
-          <span class="settings__summary-text">
-            <strong>Settings</strong>
-            <small id="settings-preview">Loading…</small>
-          </span>
-          <span class="settings__chevron" aria-hidden="true"></span>
-        </summary>
-
-        <div class="settings__body">
-          <section class="settings__card">
-            <h3 class="settings__card-title">Schedule</h3>
-            <label class="settings__field">
-              <span class="settings__label">Event end time</span>
-              <span class="settings__hint">Reminders stop and the final alert shows at this time.</span>
-              <input type="time" id="end-time-input" value="09:45" />
-            </label>
-          </section>
-
-          <section class="settings__card">
-            <h3 class="settings__card-title">Reminders</h3>
-            <label class="settings__switch">
-              <input type="checkbox" id="reminders-enabled-input" checked />
-              <span class="settings__switch-track" aria-hidden="true"></span>
-              <span class="settings__switch-content">
-                <span class="settings__label">Enable reminders</span>
-                <span class="settings__hint">Periodic popups for unchecked checklist items.</span>
-              </span>
-            </label>
-
-            <fieldset class="settings__field settings__interval" id="reminder-interval-fieldset">
-              <legend class="settings__label">Reminder interval</legend>
-              <div class="settings__segmented">
-                <label class="settings__segment">
-                  <input type="radio" name="interval" value="10" />
-                  <span>10 min</span>
-                </label>
-                <label class="settings__segment">
-                  <input type="radio" name="interval" value="15" checked />
-                  <span>15 min</span>
-                </label>
-                <label class="settings__segment">
-                  <input type="radio" name="interval" value="20" />
-                  <span>20 min</span>
-                </label>
-              </div>
-            </fieldset>
-          </section>
-
-          <section class="settings__card settings__card--actions">
-            <h3 class="settings__card-title">Checklist</h3>
-            <p class="settings__hint">Clears checklist and testimony timers. Settings and service notes stay as they are.</p>
-            <button type="button" class="btn btn--ghost-danger" id="reset-checklist-btn">
-              Reset checklist
-            </button>
-          </section>
-        </div>
-      </details>
-    </div>
-
-    <div class="modal-backdrop hidden" id="reminder-modal" role="dialog" aria-modal="true" aria-labelledby="reminder-title">
-      <div class="modal modal--reminder">
-        <header class="modal__header">
-          <div class="modal__stats">
-            <span class="modal__badge" id="reminder-badge"></span>
-            <span class="modal__time" id="reminder-time"></span>
-          </div>
-          <div class="modal__progress" aria-hidden="true">
-            <div class="modal__progress-bar" id="reminder-progress-bar"></div>
-          </div>
-          <h2 class="modal__title" id="reminder-title">Prep reminder</h2>
-          <p class="modal__intro" id="reminder-intro"></p>
-        </header>
-        <div class="modal__body" id="reminder-list"></div>
-        <footer class="modal__footer">
-          <p class="modal__hint">Dismiss to jump to the checklist and mark items complete.</p>
-          <div class="modal__actions">
-            <button type="button" class="btn btn--primary" id="reminder-dismiss-btn">Got it — back to checklist</button>
-          </div>
-        </footer>
-      </div>
-    </div>
-
-    <div class="final-alert hidden" id="final-alert" role="alert">
-      <div class="final-alert__content">
-        <strong>Be ready — the service is getting started.</strong>
-        <p>Remove the lyrics from the screen.</p>
-        <button type="button" class="btn btn--primary" id="final-alert-dismiss-btn">Dismiss</button>
+        </section>
       </div>
     </div>
 
