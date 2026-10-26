@@ -15,6 +15,7 @@ const GROUP_ACCENTS = {
   media: "media",
   apps: "apps",
   prep_before_service: "prep",
+  during_service_mind: "during",
 };
 
 function formatClock(date) {

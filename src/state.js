@@ -9,6 +9,7 @@ export const CHANGE_TRACKED_ITEM_IDS = new Set([
   "songs",
   "songs_sequence",
   "song_sequence",
+  "last_week_media",
   "download_announcements",
 ]);
 
@@ -16,6 +17,7 @@ export const CHANGE_TRACK_MESSAGES = {
   songs: "Change before service",
   songs_sequence: "Change before service",
   song_sequence: "Change before service",
+  last_week_media: "Received during service",
   download_announcements: "Received during service",
 };
 
@@ -135,6 +137,8 @@ export function getDefaultGroups() {
           id: "last_week_media",
           label: "Videos/photos from last week's event",
           checked: false,
+          changeOccurred: false,
+          changeAt: null,
         },
         {
           id: "next_week_event",
@@ -166,8 +170,8 @@ export function getDefaultGroups() {
           parentItemId: "next_week_event",
         },
         {
-          id: "phone_number",
-          label: "Check Phone number",
+          id: "event_dates",
+          label: "Check the dates of the event",
           checked: false,
           parentItemId: "next_week_event",
         },
@@ -282,6 +286,30 @@ export function getDefaultGroups() {
           checked: false,
         },
         { id: "thumbnail_on", label: "Keep thumbnail ON", checked: false },
+      ],
+    },
+    {
+      id: "during_service_mind",
+      title: "Always Keep in Mind During Service",
+      items: [
+        {
+          id: "during_whatsapp_presentation_groups",
+          label:
+            "Stay attentive to the WhatsApp and Presentation groups at all times. If any new instruction, update, or notification is shared, take the necessary action promptly.",
+          checked: false,
+        },
+        {
+          id: "during_blackout_before_crusade_video",
+          label:
+            "Before playing any crusade or celebration video on ProPresenter, switch to a blackout screen. Ensure that no image or content is displayed in the background so that Vartul Bhaiya can smoothly switch it to live.",
+          checked: false,
+        },
+        {
+          id: "during_coordinate_vartul_video_countdown",
+          label:
+            "Coordinate with Vartul Bhaiya before playing any video. Once the video starts, provide countdown updates as it approaches completion (1 minute, 30 seconds, 20 seconds, and 10 to 0 seconds). If the video includes audio, inform the sound team well in advance so they can unmute and prepare the audio playback accordingly.",
+          checked: false,
+        },
       ],
     },
   ];
