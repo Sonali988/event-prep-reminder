@@ -371,6 +371,10 @@ body {
   border-top-color: var(--accent);
 }
 
+.checklist-group--during {
+  border-top-color: var(--warn);
+}
+
 .checklist-group--complete {
   border-color: var(--ok-border);
 }
@@ -513,6 +517,14 @@ body {
 
 .checklist-item--nested .checklist-item__main span {
   font-size: 0.94rem;
+}
+
+.checklist-group--during_service_mind .checklist-item__main {
+  align-items: flex-start;
+}
+
+.checklist-group--during_service_mind .checklist-item__main span {
+  line-height: 1.45;
 }
 
 .checklist-item__main input,
@@ -903,12 +915,17 @@ body {
     grid-template-columns: 1fr 1fr;
   }
 
-  .checklist-group--prep_before_service {
+  .checklist-group--prep_before_service,
+  .checklist-group--during_service_mind {
     grid-column: 1 / -1;
   }
 
   .checklist-group--prep_before_service .checklist-group__items {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .checklist-group--during_service_mind .checklist-group__items {
+    grid-template-columns: 1fr;
   }
 }
 
